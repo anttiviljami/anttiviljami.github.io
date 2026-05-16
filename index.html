@@ -1,17 +1,238 @@
 <!doctype html>
-<html>
+<html lang="en">
+
 <head>
-	<meta charset="utf8">
-	<meta name="viewport" content="width=device-width">
-	<title>Viljami Kuosmanen</title>
-	<meta name="og:title" content="Viljami Kuosmanen" />
-	<meta name="og:image" content="/images/anttiviljami.jpg" />
-	<link rel="icon" type="image/png" href="/favicon.png">
-	<link rel="stylesheet" href="/global.css">
-	<link rel="stylesheet" href="/bundle.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Viljami Kuosmanen · Product Engineer</title>
+  <meta name="description"
+    content="Product Engineer based in Finland. Head of Engineering at epilot.cloud, maintainer of openapistack.co, author of the Product Engineer Manifesto." />
+  <meta name="theme-color" content="#0e0f12" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#fafaf7" media="(prefers-color-scheme: light)" />
+  <meta property="og:title" content="Viljami Kuosmanen · Product Engineer" />
+  <meta property="og:description"
+    content="Product Engineer based in Finland. Head of Engineering at epilot.cloud, maintainer of openapistack.co, author of the Product Engineer Manifesto." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://viljami.io" />
+  <link rel="canonical" href="https://viljami.io" />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="alternate icon" href="/assets/favicon.png" type="image/png" />
+  <link rel="stylesheet" href="/style.css" />
 </head>
+
 <body>
-	<script src="https://cdn.jsdelivr.net/gh/cferdinandi/smooth-scroll@15/dist/smooth-scroll.polyfills.min.js"></script>
-	<script src="/bundle.js"></script>
+  <main class="card">
+    <svg class="card__watermark" viewBox="0 0 100 100" preserveAspectRatio="xMaxYMax meet" aria-hidden="true">
+      <text x="50" y="80"
+        font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Inter, Roboto, 'Helvetica Neue', Arial, sans-serif"
+        font-size="98" font-weight="900" fill="none" stroke="currentColor" stroke-width="0.5"
+        text-anchor="middle">v</text>
+    </svg>
+    <header class="hero">
+      <p class="eyebrow">Viljami.io</p>
+      <h1>Viljami Kuosmanen</h1>
+      <p class="title">Product Engineer</p>
+    </header>
+
+    <section class="intro">
+      <p>
+        Software engineer with 15+ years of experience.
+        Currently <strong>Head of Engineering</strong> at
+        <a href="https://www.epilot.cloud" target="_blank" rel="noopener">epilot.cloud</a>,
+        maintainer of
+        <a href="https://openapistack.co" target="_blank" rel="noopener">openapistack.co</a>
+        (used by AWS, GitHub, IBM, Intel, and SAP),
+        and author of the
+        <a href="https://productengineer.org" target="_blank" rel="noopener">Product Engineer Manifesto</a>.
+      </p>
+      <p>
+        Real-world experience building AI-augmented product engineering teams in B2B SaaS. Five years scaling a product
+        org to 45 engineers, the last 12 months turning it into one where
+        <a href="https://www.linkedin.com/pulse/our-entire-company-ships-code-now-40-prs-from-60-days-kuosmanen-xgttf"
+          target="_blank" rel="noopener">AI agents and non-engineers ship merged code into production</a>.
+        Open to advisory, workshops, and speaking.
+      </p>
+    </section>
+
+    <nav class="actions" aria-label="Primary actions">
+      <a class="btn btn-primary" href="https://calendly.com/viljami" target="_blank" rel="noopener">
+        <span>Schedule a meeting</span>
+        <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16">
+          <path fill="currentColor" d="M14 5l7 7-7 7-1.4-1.4 4.6-4.6H3v-2h14.2l-4.6-4.6L14 5z" />
+        </svg>
+      </a>
+      <a class="btn" href="/assets/resume.pdf" target="_blank" rel="noopener">View resume</a>
+    </nav>
+
+    <aside class="product-pitch">
+      <a class="product-pitch__cover" href="https://productengineer.org/product-engineer-checklist.pdf?version=2025-08"
+        target="_blank" rel="noopener" onclick="openPaygate(event)"
+        aria-label="Open the Product Engineer Checklist purchase dialog">
+        <img src="/assets/checklist-cover.jpg" alt="Cover of the Product Engineer Checklist" width="422" height="600"
+          loading="lazy" />
+      </a>
+      <div class="product-pitch__copy">
+        <h3>The Product Engineer Checklist</h3>
+        <p>How to think like a product engineer. A 30-page guide for engineers who want more ownership over the products
+          they ship.</p>
+        <a class="btn btn-product" href="https://productengineer.org/product-engineer-checklist.pdf?version=2025-08"
+          target="_blank" rel="noopener" onclick="openPaygate(event)">Get the PDF</a>
+      </div>
+    </aside>
+
+    <section class="meta">
+      <dl>
+        <div>
+          <dt>Portfolio</dt>
+          <dd>
+            <a href="https://epilot.cloud" target="_blank" rel="noopener">epilot.cloud</a> ·
+            <a href="https://kamerastore.com" target="_blank" rel="noopener">kamerastore.com</a> ·
+            <a href="https://seravo.com" target="_blank" rel="noopener">seravo.com</a>
+          </dd>
+        </div>
+        <div>
+          <dt>Open source</dt>
+          <dd>
+            <a href="https://openapistack.co" target="_blank" rel="noopener">openapistack.co</a>
+            <span class="badge">300k+ weekly npm downloads</span>
+          </dd>
+        </div>
+        <div>
+          <dt>Writing</dt>
+          <dd>
+            <a href="https://productengineer.org" target="_blank" rel="noopener">productengineer.org</a> ·
+            <a href="https://dev.to/anttiviljami" target="_blank" rel="noopener">dev.to</a> ·
+            <a href="https://linkedin.com/in/anttiviljami" target="_blank" rel="noopener">LinkedIn</a>
+          </dd>
+        </div>
+        <div>
+          <dt>Based in</dt>
+          <dd>Kangasala, Finland (Tampere region)</dd>
+        </div>
+      </dl>
+    </section>
+
+    <nav class="links" aria-label="Profiles">
+      <a href="https://github.com/anttiviljami" target="_blank" rel="noopener" aria-label="GitHub">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path fill="currentColor"
+            d="M12 .5C5.7.5.7 5.5.7 11.8c0 5 3.3 9.2 7.8 10.7.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.5-1.5 7.8-5.8 7.8-10.7C23.3 5.5 18.3.5 12 .5z" />
+        </svg>
+      </a>
+      <a href="https://linkedin.com/in/anttiviljami" target="_blank" rel="noopener" aria-label="LinkedIn">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path fill="currentColor"
+            d="M20.5 2h-17A1.5 1.5 0 0 0 2 3.5v17A1.5 1.5 0 0 0 3.5 22h17a1.5 1.5 0 0 0 1.5-1.5v-17A1.5 1.5 0 0 0 20.5 2zM8 19H5V9h3v10zM6.5 7.7a1.7 1.7 0 1 1 0-3.5 1.7 1.7 0 0 1 0 3.5zM19 19h-3v-5.2c0-1.2 0-2.8-1.7-2.8s-2 1.3-2 2.7V19h-3V9h2.9v1.4h.1a3.2 3.2 0 0 1 2.9-1.6c3.1 0 3.7 2 3.7 4.7V19z" />
+        </svg>
+      </a>
+      <a href="https://github.com/sponsors/anttiviljami" target="_blank" rel="noopener" aria-label="GitHub Sponsors">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path fill="currentColor"
+            d="M12 21s-7.5-4.7-9.8-9.4C.6 8 2.9 4 6.6 4c1.9 0 3.6 1 5.4 3 1.8-2 3.5-3 5.4-3 3.7 0 6 4 4.4 7.6C19.5 16.3 12 21 12 21z" />
+        </svg>
+      </a>
+    </nav>
+  </main>
+
+  <footer class="impressum">
+    <p>
+      Operated by <strong>MRR Copilot Oy</strong> ·
+      VAT-ID FI35240143 ·
+      Liisantie 2 A, 36200 Kangasala, Finland
+    </p>
+    <p class="impressum-link">
+      <a href="/impressum.html">Impressum / Legal</a>
+    </p>
+  </footer>
+
+  <dialog class="paygate" aria-labelledby="paygate-title">
+    <button class="paygate__close" type="button" aria-label="Close" onclick="closePaygate()">✕</button>
+    <p class="paygate__lead" id="paygate-title">
+      The Product Engineer Checklist
+    </p>
+    <p class="paygate__body">
+      How to think like a product engineer. Pay what you think is fair on
+      <a href="https://github.com/sponsors/anttiviljami" target="_blank" rel="noopener">GitHub Sponsors</a>.
+    </p>
+    <div class="paygate__tiers">
+      <a class="paygate__tier" href="https://github.com/sponsors/anttiviljami?frequency=one-time&amount=1"
+        target="_blank" rel="noopener">Pay $1</a>
+      <a class="paygate__tier paygate__tier--suggested"
+        href="https://github.com/sponsors/anttiviljami?frequency=one-time&amount=5" target="_blank" rel="noopener"
+        autofocus>
+        Pay $5
+        <span class="paygate__tier-label">Suggested</span>
+      </a>
+      <a class="paygate__tier" href="https://github.com/sponsors/anttiviljami?frequency=one-time&amount=25"
+        target="_blank" rel="noopener">Pay $25</a>
+    </div>
+    <a class="paygate__custom" href="https://github.com/sponsors/anttiviljami?frequency=one-time&amount=20"
+      target="_blank" rel="noopener">Custom amount</a>
+    <a class="paygate__skip" href="https://productengineer.org/product-engineer-checklist.pdf?version=2025-08"
+      target="_blank" rel="noopener" onclick="closePaygate()">Download for free →</a>
+    <p class="paygate__footer">Always free. No email or personal data collected.</p>
+  </dialog>
+
+  <script>
+    const paygate = document.querySelector('dialog.paygate');
+
+    function openPaygate(event) {
+      if (event) event.preventDefault();
+      paygate.showModal();
+    }
+
+    function closePaygate() {
+      paygate.close();
+    }
+
+    paygate.addEventListener('click', (event) => {
+      if (event.target === paygate) {
+        paygate.close();
+      }
+    });
+
+    // Subtle card tilt + watermark parallax
+    (() => {
+      const card = document.querySelector('.card');
+      const wm = card.querySelector('.card__watermark');
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+      if (reduce || !fine) return;
+
+      const MAX_TILT = 1.5;
+      let rafId = null;
+      let nextEvent = null;
+
+      const apply = () => {
+        rafId = null;
+        if (!nextEvent) return;
+        const rect = card.getBoundingClientRect();
+        const x = (nextEvent.clientX - rect.left) / rect.width;
+        const y = (nextEvent.clientY - rect.top) / rect.height;
+        const rotateY = (x - 0.5) * MAX_TILT * 2;
+        const rotateX = (0.5 - y) * MAX_TILT * 2;
+        card.style.transform = 'perspective(1200px) rotateX(' + rotateX.toFixed(3) + 'deg) rotateY(' + rotateY.toFixed(3) + 'deg)';
+        if (wm) {
+          wm.style.transform = 'translate(' + ((x - 0.5) * -22).toFixed(1) + 'px, ' + ((y - 0.5) * -22).toFixed(1) + 'px)';
+        }
+      };
+
+      card.addEventListener('mousemove', (event) => {
+        nextEvent = event;
+        if (rafId === null) rafId = requestAnimationFrame(apply);
+      });
+
+      card.addEventListener('mouseleave', () => {
+        nextEvent = null;
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+          rafId = null;
+        }
+        card.style.transform = '';
+        if (wm) wm.style.transform = '';
+      });
+    })();
+  </script>
 </body>
+
 </html>

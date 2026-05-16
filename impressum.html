@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Impressum · Viljami.io</title>
+    <meta name="description" content="Legal information for Viljami.io / MRR Copilot Oy." />
+    <meta name="robots" content="noindex,follow" />
+    <link rel="icon" href="/assets/favicon.png" type="image/png" />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="legal">
+      <h1>Impressum</h1>
+
+      <p>
+        Viljami.io is operated as a trade name of <strong>MRR Copilot Oy</strong>, a Finnish private limited company (osakeyhtiö) registered in Finland.
+      </p>
+
+      <h2>Company</h2>
+      <address>
+        MRR Copilot Oy<br />
+        Liisantie 2 A<br />
+        36200 Kangasala<br />
+        Finland
+      </address>
+
+      <h2>Identifiers</h2>
+      <p>
+        VAT-ID: FI35240143<br />
+        Domicile: Kangasala, Finland<br />
+        Field of business: IT consulting
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        Preferred: <a href="https://calendly.com/viljami" target="_blank" rel="noopener">calendly.com/viljami</a><br />
+        Email: <a id="email" href="#" data-e="dmlsamFtaUB2aWxqYW1pLmlv">viljami [at] viljami.io</a><br />
+        Director: Viljami Kuosmanen
+      </p>
+
+      <script>
+        document.querySelectorAll('[data-e]').forEach((el) => {
+          const e = atob(el.dataset.e);
+          el.textContent = e;
+          el.href = 'mailto:' + e;
+        });
+      </script>
+
+      <h2>Responsible for content</h2>
+      <p>
+        Viljami Kuosmanen, address as above.
+      </p>
+
+      <h2>Disclaimer</h2>
+      <p>
+        Content on this site reflects the personal and professional views of Viljami Kuosmanen and does not constitute legal or financial advice. External links are provided for convenience; we are not responsible for the content of third-party sites.
+      </p>
+
+      <p class="back">
+        <a href="/">← Back to viljami.io</a>
+      </p>
+    </main>
+  </body>
+</html>
