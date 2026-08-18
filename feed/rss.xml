@@ -4,7 +4,7 @@
         <title>Viljami Kuosmanen — Writing</title>
         <link>https://viljami.io/feed/</link>
         <description>Essays on product engineering, AI-augmented software teams, and running engineering orgs.</description>
-        <lastBuildDate>Tue, 18 Aug 2026 11:28:38 GMT</lastBuildDate>
+        <lastBuildDate>Tue, 18 Aug 2026 12:08:09 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <language>en</language>
@@ -323,6 +323,72 @@
     database-patterns.md
 </code></pre><p>Generate the compressed index (pipe-delimited format, one line per directory). Add it to your CLAUDE.md or AGENTS.md file - the context files that Claude Code and other coding agents read on startup. Done.</p>
 <p>The compressed index approach works! 🎉 Vercel&#39;s research proved it: 100% task success versus 79% without it. We&#39;ve validated it internally. Now it&#39;s about whether you&#39;ll adopt it before your competitors do.</p>
+]]></content:encoded>
+        </item>
+        <item>
+            <title><![CDATA[Five Years In: Building a Place Worth Staying]]></title>
+            <link>https://viljami.io/feed/five-years-in-building-a-place-worth-staying/</link>
+            <guid isPermaLink="false">https://viljami.io/feed/five-years-in-building-a-place-worth-staying/</guid>
+            <pubDate>Wed, 01 Oct 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[It's been 5 years since I joined epilot. The next chapter isn't about shipping more features, quicker. It's about building a place worth staying.]]></description>
+            <content:encoded><![CDATA[<p>It&#39;s been 5 years since I joined epilot.</p>
+<p>I moved from Munich to Cologne with the goal to help out a small energy startup build their SaaS on AWS.</p>
+<p>What I found was a crazy, ambitious team, an impressive sales track record, and a product team struggling with execution; largely due to the product having been outsourced early on to a team in Vietnam, who built it on top of a proprietary product we didn&#39;t own.</p>
+<p>I saw the opportunity, and decided to give it six months. It turned into five years. The objective:</p>
+<ul>
+<li>Rewrite the product on a scalable tech stack we own.</li>
+<li>Build a top engineering team focused on speed &amp; delivery.</li>
+<li>Reach $100M valuation in 3 years.</li>
+</ul>
+<p>Today, epilot runs entirely on serverless AWS. We ship to production more than 100 times each week and delivered over 300 new features just in the past year.</p>
+<p>The in-house engineering team grew from 10 to more than 45 senior product engineers. We&#39;ve kept the structure flat, the ownership high, and the results speak for themselves.</p>
+<p>That ambition doesn&#39;t feel like a stretch goal anymore.</p>
+<h2>From rewrites to real speed</h2>
+<p>Back in 2020, everything was about big risky bets: rebuild the product, migrate the customers, prove that it works.</p>
+<p>We killed the legacy product, launched 360, and reached feature parity while shipping new features for customers.</p>
+<p>Somehow we pulled this off while sustaining healthy revenue growth throughout.</p>
+<p>Now we&#39;re shipping faster than ever.</p>
+<p>Our early bets are paying off. There&#39;s still no platform team, no DevOps team, and no manager roles to oversee engineers.</p>
+<p>With AI, we now move at a pace we couldn&#39;t imagine five years ago.</p>
+<h2>A new kind of challenge</h2>
+<p>So what&#39;s next?</p>
+<p>The next chapter isn&#39;t about just delivering more features, quicker. It&#39;s about long term thinking.</p>
+<p>When I joined epilot, I was a 20-something chasing my next startup exit story. I moved to Cologne on a limb, prepared and happy to work weekends &amp; late nights to get shit done.</p>
+<p>Now I&#39;m in my 30s. Married. Two kids. Living back in my old hometown in Finland, working remotely, surrounded by family and pine trees.</p>
+<p>The pace hasn&#39;t changed much, but my perspective has.</p>
+<p>Today, I value the freedom and balance this company gives me just as much as the excitement of the early years. That&#39;s why this question matters to me more than ever:</p>
+<p>How do we make epilot a place where top talent wants to spend the next 3–5 years and beyond, to do the best work of their career?</p>
+<h2>A place to do your best work</h2>
+<p>For me, the answer is simple.</p>
+<p>epilot is a place where you can do the best work of your career and still have a life.</p>
+<p>We don&#39;t demand crazy hours, we never did. That was a personal choice I made to push us forward early on.</p>
+<p>But we still demand excellence &amp; delivery. The bar today is much higher than when I started.</p>
+<p>With today&#39;s AI tools, I find there&#39;s just less need to spend nights coding anyway. I no longer need to stay late to finish coding a feature, or set up infrastructure, when Claude Code helps me get it done 5x faster, during business hours.</p>
+<p>Our Salary Fairness model is a big part of that promise.</p>
+<p>We review compensation twice a year to make sure every engineer gets paid their fair market value. Not based on negotiation skills, but on track record and market demand.</p>
+<p>It&#39;s simple: we want to make it as hard as possible for anyone to justify leaving epilot just for better money.</p>
+<p>At the same time, we encourage everyone to keep growing their track record. Inside and outside epilot. We support open source and side projects, because all of it builds experience, visibility, and helps strengthen epilot&#39;s brand as a serious tech company with top industry talent.</p>
+<p>You don&#39;t have to quit to grow.</p>
+<h2>Why it matters</h2>
+<p>If we want to keep attracting and retaining the best talent, we need to make sure the promise of working here still feels worth it.</p>
+<p>That means paying fairly, staying transparent, and giving people the freedom to focus on what matters: building great products and growing in their craft.</p>
+<p>Salary fairness plays a big part, but so does trust. The trust that you can make decisions, ship fast, and still log off to be with your family at the end of the day.</p>
+<p>That balance is rare in tech.</p>
+<p>It&#39;s one of the main reasons I&#39;m still here.</p>
+<h2>What keeps me here</h2>
+<p>I&#39;ve been building software for more than 15 years. I&#39;ve worked in startups, enterprises, and built my own companies.</p>
+<p>But I&#39;ve never stayed anywhere as long as I&#39;ve stayed at epilot.</p>
+<p>Here I get to live what I wrote about in the Product Engineer Manifesto: real ownership, customer impact, and ability to take pride in my work.</p>
+<p>The Viljami who joined in 2020 wanted to move fast and build a SaaS unicorn in record time. The Viljami in 2025 wants to make it last.</p>
+<h2>Looking ahead</h2>
+<p>We&#39;ll keep finding ways to ship faster. Always.</p>
+<p>But we probably don&#39;t need big rewrites anymore. No need to take crazy shortcuts. We&#39;ve already proven we can build.</p>
+<p>Now the focus is growth through quality, delivering what truly matters for our customers.</p>
+<p>That&#39;s ERP integrations for me now. Not exactly the sexiest topic, but one that still excites me through the potential to make a massive difference to both the adoption of our product, and our customers.</p>
+<p>But we&#39;re in this for the long game now.</p>
+<p>We&#39;ve hit our goals so far. Now let&#39;s build the next chapter, from where we are today all the way to unicorn. Even if that takes longer than a couple more years.</p>
+<p>It&#39;s still early in epilot&#39;s story. We&#39;re not even close to done yet.</p>
+<p>🦄</p>
 ]]></content:encoded>
         </item>
         <item>

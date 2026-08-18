@@ -12,6 +12,7 @@
   <meta property="og:description" content="A few months back an engineer was setting up a build pipeline with an AI coding agent. The agent held..." />
   <meta property="og:type" content="article" />
   <meta property="og:url" content="https://viljami.io/feed/we-locked-ourselves-out-of-production/" />
+  <meta property="og:image" content="https://viljami.io/assets/covers/we-locked-ourselves-out-of-production.webp" />
   <link rel="canonical" href="https://viljami.io/feed/we-locked-ourselves-out-of-production/" />
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
   <link rel="alternate icon" href="/assets/favicon.png" type="image/png" />
@@ -28,6 +29,10 @@
       <p class="title">August 18, 2026</p>
     </header>
 
+    <figure class="post__cover">
+      <img src="/assets/covers/we-locked-ourselves-out-of-production.webp" alt="We Locked Ourselves Out of Production" />
+      <figcaption>We Locked Ourselves Out of Production</figcaption>
+    </figure>
     <article class="post__body">
 <p>A few months back an engineer was setting up a build pipeline with an AI coding agent. The agent held production AWS credentials. It created a CloudFormation stack in production, then &quot;cleaned up&quot; by deleting it. Straight in prod, outside CI/CD.</p>
 <p>Our monitoring caught it immediately. An alert fired the moment the change happened: deployment in the production account by a role that is not part of the approved CI/CD pipeline.</p>

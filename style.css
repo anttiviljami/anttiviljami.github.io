@@ -810,6 +810,30 @@ dialog.paygate::backdrop {
 }
 
 /* ============================================================
+   Post cover image
+   ============================================================ */
+
+.post__cover {
+  margin: 1.5rem 0 0;
+}
+
+.post__cover img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.post__cover figcaption {
+  margin-top: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--fg-faint);
+  text-align: center;
+}
+
+/* ============================================================
    Post body (rendered markdown)
    ============================================================ */
 
