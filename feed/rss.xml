@@ -4,7 +4,7 @@
         <title>Viljami Kuosmanen — Writing</title>
         <link>https://viljami.io/feed/</link>
         <description>Essays on product engineering, AI-augmented software teams, and running engineering orgs.</description>
-        <lastBuildDate>Tue, 18 Aug 2026 12:08:09 GMT</lastBuildDate>
+        <lastBuildDate>Tue, 18 Aug 2026 12:24:47 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <language>en</language>
@@ -87,10 +87,10 @@
 <p>This isn&#39;t a step away from the job. I&#39;m still leading. I&#39;m still in our engineering leadership meetings. I&#39;m still committed to epilot&#39;s long game. The title change is about clarifying what my work looks like in 2026 so that it stops getting in the way of Vlad owning the HOE role outright.</p>
 <p>Quick recap of how we got here.</p>
 <h2>A brief history</h2>
-<p>I joined epilot in October 2020 as a cloud engineer and took over as Head of Engineering in May 2021. We were about 10 in-house engineers. Our product was a Java monolith built on a 3rd-party low-code platform (Axon Ivy) we didn&#39;t even own the source code to.</p>
+<p>I joined epilot in October 2020 as a cloud engineer and took over as Head of Engineering in May 2021. We were about 10 in-house engineers. Our product was a Java monolith built on a 3rd-party low-code platform we didn&#39;t even own the source code to.</p>
 <p>My job: build better software, faster.</p>
 <p>The first few years were heavy on technical and people leadership. I wrote our first Engineering Principles, introduced RFCs, established our weekly product demos, and championed the 360 plan to rewrite the entire product on serverless AWS with microfrontends.</p>
-<p>I led the original 360 strike team and drove the new architecture from the front. We killed Ivy. We managed to grow MRR fast while migrating customers. Today we ship 150+ times a week to production. The in-house engineering team has grown from 10 to over 40 senior product engineers from more than 10 countries. No management layer. No platform team. No ops team.</p>
+<p>I led the original 360 strike team and drove the new architecture from the front. We killed the legacy platform. We managed to grow MRR fast while migrating customers. Today we ship 150+ times a week to production. The in-house engineering team has grown from 10 to over 40 senior product engineers from more than 10 countries. No management layer. No platform team. No ops team.</p>
 <p>I took pride in keeping our headcount relatively low. Raise the bar, hire fewer, expect more out of each. Product Engineer Mindset.</p>
 <p>I introduced Salary Fairness reviews, ran our remote-first engineer hiring round after round, and built up most of what now just feels like &quot;how we do things&quot; at epilot.</p>
 <h2>The shift</h2>
