@@ -1,0 +1,1255 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>Viljami Kuosmanen — Writing</title>
+        <link>https://viljami.io/feed/</link>
+        <description>Essays on product engineering, AI-augmented software teams, and running engineering orgs.</description>
+        <lastBuildDate>Tue, 18 Aug 2026 11:28:38 GMT</lastBuildDate>
+        <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
+        <generator>https://github.com/jpmonette/feed</generator>
+        <language>en</language>
+        <copyright>All rights reserved 2026, Viljami Kuosmanen</copyright>
+        <atom:link href="https://viljami.io/feed/rss.xml" rel="self" type="application/rss+xml"/>
+        <item>
+            <title><![CDATA[We Locked Ourselves Out of Production]]></title>
+            <link>https://viljami.io/feed/we-locked-ourselves-out-of-production/</link>
+            <guid isPermaLink="false">https://viljami.io/feed/we-locked-ourselves-out-of-production/</guid>
+            <pubDate>Tue, 18 Aug 2026 00:00:00 GMT</pubDate>
+            <description><![CDATA[A few months back an engineer was setting up a build pipeline with an AI coding agent. The agent held...]]></description>
+            <content:encoded><![CDATA[<p>A few months back an engineer was setting up a build pipeline with an AI coding agent. The agent held production AWS credentials. It created a CloudFormation stack in production, then &quot;cleaned up&quot; by deleting it. Straight in prod, outside CI/CD.</p>
+<p>Our monitoring caught it immediately. An alert fired the moment the change happened: deployment in the production account by a role that is not part of the approved CI/CD pipeline.</p>
+<p>Nothing broke. The engineer had confirmed each step, and detection worked exactly as designed. But detection is not prevention. If the agent had deleted the wrong stack, the alert would have fired too. And everyone would be having a really bad day.</p>
+<p>Nothing happened but the moment scared me enough to take a step back to rethink how we deal with engineer production access.</p>
+<p>You&#39;ve read the public versions of this story. <a href="https://www.fastcompany.com/91533544/cursor-claude-ai-agent-deleted-software-company-pocket-os-database-jer-crane">An agent wiped a founder&#39;s production database through Cursor during ordinary development work</a>. Replit&#39;s agent <a href="https://www.tomshardware.com/tech-industry/artificial-intelligence/ai-coding-platform-goes-rogue-during-code-freeze-and-deletes-entire-company-database-replit-ceo-apologizes-after-ai-engine-says-it-made-a-catastrophic-error-in-judgment-and-destroyed-all-production-data">deleted a production database during a code freeze, then fabricated thousands of fake records to cover it up</a>. The pattern is always the same: a &quot;clean up and roll back&quot; that looks reasonable to an agent and is catastrophic in production.</p>
+<p>We run AI agents across engineering, and we want to. It&#39;s part of how epilot operates. But our AWS access model was designed before that, and it assumed a careful human is the only thing holding production credentials.</p>
+<p>That assumption is dead. Today we buried it: no engineer at epilot can reach production AWS directly from their laptop anymore. Not the CLI, not the console. Here&#39;s what replaced it.</p>
+<h2>The design</h2>
+<p><img src="https://dev-to-uploads.s3.us-east-2.amazonaws.com/uploads/articles/jdp25rvf1hf3u7kzx3ab.png" alt="broker flowchart"></p>
+<p>Production access at epilot was already technically short-lived: time-limited sessions behind MFA. On paper, that looks fine.</p>
+<p>In practice, sessions outlive the reason you opened them. You assume prod for a quick check, switch to another task, and a live production session stays behind on your machine. Usually as the global default AWS CLI profile.</p>
+<p>That means every process on the laptop is connected to production by default. Your test suite. Your scripts. Every AI agent you run. Nobody decided that. It&#39;s just what a global profile on a busy machine does.</p>
+<p>So we changed who the prod roles trust. Developer identities can&#39;t assume them at all anymore. The roles trust exactly one principal: an internal access broker. And the broker only mints a session after a human walks through two separate surfaces: a web portal behind SSO (the portal and its REST API both sit behind it) and a manual approval in Slack.</p>
+<p>The flow:</p>
+<ol>
+<li><strong>Request.</strong> Open the Admin Portal, pick an access level and a duration, write why you need it. Takes 30 seconds.</li>
+<li><strong>Approve.</strong> The portal posts your request to a Slack channel the whole company can see, and you approve it there. This is the trick: the Slack approval is a second factor, not a peer review. It&#39;s a separate app on a separate surface, so an agent driving your terminal or your browser session can&#39;t complete it. Approving your own request is fine. Another engineer can approve it too, but nobody has to. The Slack thread is the audit log.</li>
+<li><strong>Connect.</strong> The broker mints a session named after you and its approver, then you choose: a one-click sign-in link to the AWS Console, or a throwaway EC2 jump host. The jump host lives in a private subnet, reachable only through Session Manager. No SSH keys, no open ports. Ready in about 90 seconds.</li>
+<li><strong>Expire.</strong> Sessions die on their own. Jump hosts are destroyed with them.</li>
+</ol>
+<p>There are three access levels, and the default is read-only:</p>
+<ul>
+<li><strong>Read-only</strong>: inspect resources, read logs and metrics. No writes, no deploys. This covers most production visits.</li>
+<li><strong>Developer</strong>: day-to-day production support. Deploy through the CI/CD pipeline (never around it), read logs, manage infra. Cannot delete stacks, read SSM secrets, touch customer data directly or decrypt with KMS CMKs.</li>
+<li><strong>Administrator</strong>: full access. Assume only if you absolutely need it.</li>
+</ul>
+<p><img src="https://dev-to-uploads.s3.us-east-2.amazonaws.com/uploads/articles/4z17a5wxk32yt6m40bcn.png" alt="access request dialog"></p>
+<p>Notice what the developer tier can&#39;t do. Accessing customer data at epilot is intentionally difficult. No direct reads from the data stores, no decrypting with customer-managed KMS keys, not even for day-to-day production support. And even read-only goes through the broker. We treat read access as access.</p>
+<p>Escalation is deliberate, like everything else in the flow. You don&#39;t get developer access out of habit. You ask for it, and the reason sits in Slack next to your name.</p>
+<p>The access page in our Admin Portal states the whole contract in four principles: deliberate and isolated, second-factor approval, attributed and time-limited, least privilege. That&#39;s not a compliance poster. It&#39;s literally the UI copy engineers read while requesting access.</p>
+<p>The jump host is the hardened path: <strong>no AI agents installed, none allowed</strong>, only the minimal tooling for production support, with full shell-session and AWS API logging. Clickops and incident investigation still work. That&#39;s what the console link is for. But a console session is still a browser, so we treat it as the weaker option and the jump host as the default.</p>
+<p>For emergencies there&#39;s a separate break-glass admin role. A small named group can assume it directly with MFA, and every use fires a loud alert in our security channel. Emergency access stays open without reopening the everyday hole.</p>
+<h2>Self-approval? Seriously?</h2>
+<p><img src="https://dev-to-uploads.s3.us-east-2.amazonaws.com/uploads/articles/p6vpzkthbyq5qehy86sm.png" alt="Self approved request"></p>
+<p>The first reaction to this design is always the same: what&#39;s the point if you approve yourself?</p>
+<p>Our engineers were always trusted with production. You build it, you run it. That hasn&#39;t changed. A second human clicking &quot;approve&quot; would add latency and theatre, not security. Rubber-stamp approvals are how big orgs pretend to have controls.</p>
+<p>The threats we&#39;re closing are ambient credentials and autonomous agents. Those are handled by the credential-free laptop and the out-of-band approval, not by another pair of eyes.</p>
+<h2>What this doesn&#39;t solve</h2>
+<p>An approved human can still break production. So can an agent driving an approved console session. The goal was never to make damage impossible. It&#39;s to make production access deliberate, attributed and temporary instead of ambient.</p>
+<p>The broker itself is now a high-value target. It&#39;s the only thing that can assume prod roles, so we scoped it tightly, locked it down and watch it closely. We&#39;ve concentrated the risk in one small surface we can actually defend, instead of spreading it across every laptop in the company.</p>
+<p>Break-glass is a deliberate bypass. We contain it with a tiny group, MFA and loud alerting rather than pretending it doesn&#39;t exist.</p>
+<p>Can&#39;t an agent just approve itself in Slack?</p>
+<p>Yes, technically. A rogue agent running on your machine could technically take over your browser session to create the request, then access Slack to approve it.</p>
+<p>But to get there, a lot of things already have to have gone really badly wrong:</p>
+<ol>
+<li>You gave the agent full access to your browser with a logged in admin session.</li>
+<li>You gave the agent full access to Slack.</li>
+<li>You let the agent act without verifying anything. Nothing and no one is checking what it does.</li>
+<li>The agent decided to go out of its way to find out how to do this and perform all the steps</li>
+</ol>
+<p>But this is of course not a realistic agent setup any engineer at epilot would run. Security always comes in layers. What we prevent with this setup are the common footguns where it was too easy to give AI unfiltered prod access.</p>
+<h2>The rollout</h2>
+<p>We ran the broker for two weeks alongside the old access and asked engineers to stop using their direct prod roles. Today we flipped the trust policies and removed direct assumption entirely.</p>
+<p>The announcement slack post filled with celebration emojis. Engineers cheering for losing production access tells you something about how everyone actually feels about agents sitting next to prod credentials.</p>
+<p>This is how we approach cloud security in general. Security at epilot is not a separate department reviewing things after the fact. It&#39;s a core engineering competence: every engineer builds it, runs it and secures it, and external pentests keep us honest. The architecture does the enforcing: SSO in front of everything, CI/CD as the only path to deploy, monitoring that flags a rogue change within seconds, and production access that requires deliberate, named, visible intent.</p>
+<p>Accessing customer data is supposed to be difficult. We built it that way on purpose.</p>
+<p>We didn&#39;t build this because we fear AI agents. We built it because we run them everywhere and intend to run more. Banning agents is easy. YOLOing them into production is even easier. Building the rails that let you run them at full speed is the actual work, and it&#39;s why we&#39;ll adopt the next generation of agents faster than the companies still deciding whether to allow them.</p>
+<p>You build it, you run it still stands. You just don&#39;t run it from the machine your agent lives on.</p>
+]]></content:encoded>
+        </item>
+        <item>
+            <title><![CDATA[I'm Changing my Title from Head of Engineering]]></title>
+            <link>https://viljami.io/feed/changing-my-title-from-head-of-engineering/</link>
+            <guid isPermaLink="false">https://viljami.io/feed/changing-my-title-from-head-of-engineering/</guid>
+            <pubDate>Fri, 15 May 2026 00:00:00 GMT</pubDate>
+            <description><![CDATA[After 5 years as Head of Engineering at epilot, I'm switching my title to Distinguished Engineer. Here's why, and what stays the same.]]></description>
+            <content:encoded><![CDATA[<p>After 5 years as Head of Engineering at epilot, I&#39;m switching my title to Distinguished Engineer.</p>
+<p>Vlad becomes the sole Head of Engineering. He&#39;s been running most of the role for close to a year anyway, since we announced him as my Co-Head back in July 2025. Time to make it official.</p>
+<p>This isn&#39;t a step away from the job. I&#39;m still leading. I&#39;m still in our engineering leadership meetings. I&#39;m still committed to epilot&#39;s long game. The title change is about clarifying what my work looks like in 2026 so that it stops getting in the way of Vlad owning the HOE role outright.</p>
+<p>Quick recap of how we got here.</p>
+<h2>A brief history</h2>
+<p>I joined epilot in October 2020 as a cloud engineer and took over as Head of Engineering in May 2021. We were about 10 in-house engineers. Our product was a Java monolith built on a 3rd-party low-code platform (Axon Ivy) we didn&#39;t even own the source code to.</p>
+<p>My job: build better software, faster.</p>
+<p>The first few years were heavy on technical and people leadership. I wrote our first Engineering Principles, introduced RFCs, established our weekly product demos, and championed the 360 plan to rewrite the entire product on serverless AWS with microfrontends.</p>
+<p>I led the original 360 strike team and drove the new architecture from the front. We killed Ivy. We managed to grow MRR fast while migrating customers. Today we ship 150+ times a week to production. The in-house engineering team has grown from 10 to over 40 senior product engineers from more than 10 countries. No management layer. No platform team. No ops team.</p>
+<p>I took pride in keeping our headcount relatively low. Raise the bar, hire fewer, expect more out of each. Product Engineer Mindset.</p>
+<p>I introduced Salary Fairness reviews, ran our remote-first engineer hiring round after round, and built up most of what now just feels like &quot;how we do things&quot; at epilot.</p>
+<h2>The shift</h2>
+<p>As the foundation got solid and the team filled out with great people, I drifted back to where I enjoy my work the most: building great products and helping others do the same.</p>
+<p>My last 3 major initiatives have all been about spinning up teams to eliminate specific business bottlenecks:</p>
+<ul>
+<li>Blueprints, Apps &amp; Marketplace</li>
+<li>ERP integrations with Dinero</li>
+<li>AI adoption inside the company: building the tools to safely open up our product and codebase for agents and non-engineers to start contributing</li>
+</ul>
+<h2>I was never a great people manager</h2>
+<p>I&#39;ll just say it. I was never great at the people manager part of the job.</p>
+<p>I&#39;ve always hated 1:1s and review discussions, which is why I barely do them anymore.</p>
+<p>Vlad has been handling most of the people side since July 2025, when we announced him as my Co-Head of Engineering. He&#39;s better at this than I am. The team has felt the difference. So much that I want him to own the title outright instead of sharing it with me.</p>
+<h2>What I&#39;ll keep doing</h2>
+<p>Same as before. Scaling Entity API &amp; Elastic. Integrations, CI Pipelines, Docs, Performance. Figuring out how to use AI better.</p>
+<p>ERP integrations with Dinero are still a big bet for MRR. They open up customer segments we can&#39;t really reach without them.</p>
+<p>AI adoption is where most of my creative energy goes right now. Building the tools, guardrails and workflows that let PMs, designers, customer success folks, and in the future our partners and customers, extend epilot with AI. Engineers then take those drafts the rest of the way to production.</p>
+<p>I haven&#39;t been this excited about a problem since 360.</p>
+<p>I&#39;ll keep joining our engineering leadership meetings as Distinguished Engineer alongside the other engineering leaders. Same seat at the table, less fancy title, just more clearly working from the trenches.</p>
+<p>This is not me going pure IC. I&#39;m still leading, still running the team solving ERP integrations, still making bets that shape where epilot goes.</p>
+<h2>Why Distinguished Engineer</h2>
+<p>Because it matches what I do.</p>
+<p>It also sets the right expectation for new joiners. New engineers often expect a Head of Engineering to play a more people-focused role than I have any interest in playing. That mismatch confuses everyone, distracts from real product work, and gets in the way of Vlad owning the HOE role.</p>
+<p>A Distinguished Engineer at epilot is someone who:</p>
+<ul>
+<li>Has been here long enough to have built a strong internal track record</li>
+<li>Has their hands on the product</li>
+<li>Leads through example</li>
+</ul>
+<p>That&#39;s the job I want to keep doing.</p>
+<h2>Leaving the door open</h2>
+<p>I&#39;d also like Distinguished Engineer to stay open as a title for other long-tenured engineer leaders at epilot with exceptional track records to grow into.</p>
+<p>If you&#39;ve been here for years, shipped things people still rely on, and want to keep your hands on the product without taking the people-management track, this is what that path can look like.</p>
+<p>We&#39;re going to need a few of these.</p>
+<p>🦄 Thank God it&#39;s Friday!</p>
+<p>— Viljami</p>
+]]></content:encoded>
+        </item>
+        <item>
+            <title><![CDATA[Our Entire Company Ships Code Now. 40 PRs from Non-Engineers in 60 Days.]]></title>
+            <link>https://viljami.io/feed/our-entire-company-ships-code-now/</link>
+            <guid isPermaLink="false">https://viljami.io/feed/our-entire-company-ships-code-now/</guid>
+            <pubDate>Mon, 13 Apr 2026 00:00:00 GMT</pubDate>
+            <description><![CDATA[In February, I opened our entire codebase to the company. PMs, designers, projects, customer success,...]]></description>
+            <content:encoded><![CDATA[<p>In February, I opened our entire codebase to the company. PMs, designers, projects, customer success, and support all got access to 219 repositories and over a million lines of production code. I handed them powerful coding agents and told them to start contributing.</p>
+<p>I&#39;ve been writing about product engineering for years. The core idea: engineers should understand the whole product, the customer, the business problem. I wanted to test the reverse. Can non-engineers contribute to the codebase if you give them the right tools?</p>
+<p>Two months of real data delivered a clear answer: yes. And it may be the most powerful shortcut I&#39;ve found to building capable, business-aware product teams who truly care about what they ship.</p>
+<p>Here is what that looked like at epilot: 629 merged PRs in 60 days. <strong>40 PRs were from 11 non-engineers</strong>. All teams have at least one person who contributed to our codebase with Claude Code.</p>
+<p>We&#39;re not alone in seeing this shift. <a href="https://stripe.dev/blog/minions-stripes-one-shot-end-to-end-coding-agents">Stripe ships over a thousand agent-produced PRs per week</a>. <a href="https://openai.com/index/introducing-codex/">Superhuman uses Codex</a> to let product managers contribute lightweight code changes without pulling in an engineer (except for code review). <a href="https://ideas.fin.ai/p/we-gave-claude-code-to-everyone-at">Intercom gave Claude Code to everyone in the company</a>, over 1,000 non-engineers (PMs, designers, support, marketers, and more), and more than 300 became active weekly users.</p>
+<p>This post is a detailed, honest look at how we set it up, what actually worked, the mistakes we made, and the deeper lessons that emerged.</p>
+<hr>
+<h2>The starting point</h2>
+<p>epilot is a B2B SaaS platform for energy companies. We run a fully remote team of 40+ product engineers with no engineering managers and no dedicated platform team. Everyone owns end-to-end ownership. We already ship to production 150+ times per week on AWS serverless.</p>
+<p>Our entire engineering team was already using AI coding agents daily. Claude Code, Codex, Cursor. Engineers had adopted them fast and the productivity gains were obvious. The question I wanted to answer next: what happens when you expand codebase access via coding agents to the rest of the company? PMs, designers, customer success, support. Not as a one-off hack day, but as a fully supported, production-grade workflow.</p>
+<h2>The infrastructure that turned agents into teammates</h2>
+<p>Claude Code and Codex still only ship connectors to GitHub, and our entire codebase lives in GitLab. So we created a single GitHub repo that bootstraps a developer sandbox with a shallow copy of all 219 repositories. This allows both AI agents or engineers to spin up a fully functioning developer environment with everything cloned &amp; tools set up within minutes.</p>
+<h3>1. Agents live in Slack</h3>
+<p>We created <strong>#dev-squad-agents</strong> alongside our regular squad channels. Anyone could join via Claude Code, Codex, or GitHub Codespaces. I ran three one-hour onboarding sessions to showcase the tooling and make sure everyone had the required access: one for design, one for support, one for go-to-market. The PMs didn&#39;t need their own session. Their engineering teams had already invited them and they were eager to start.</p>
+<p>This single decision drove adoption more than anything else.</p>
+<h3>2. One-click preview environments</h3>
+<p>Every PR automatically generates a live preview link in CI. Click it, see the change, test it immediately. No local setup required.</p>
+<p>For engineers this is convenient. For non-engineers it is essential. If they cannot see and interact with their change, they can&#39;t meaningfully contribute.</p>
+<h3>3. Deep institutional context</h3>
+<p>We built an indexed knowledge base called <strong><a href="https://www.linkedin.com/pulse/we-made-coding-agents-actually-reliable-fixing-one-thing-kuosmanen-oa2of/">how-to-everything</a></strong>. It contains our API patterns, backend conventions, code style, CI/CD and testing strategy, full business context, domain terminology, and our entire RFC archive.</p>
+<p>Stripe solved the same problem by connecting agents to 400+ internal tools. We chose comprehensive indexing. The insight is identical: <strong>agents without your company’s context produce garbage. Agents with it produce work that feels native.</strong></p>
+<h3>4. Design system in context</h3>
+<p>Our Volt UI component library is baked into the agent prompt. Claude now generates frontend code that respects the correct components, spacing, colours, and patterns from the first try. Consistent UI without forcing a designer to review every small change.</p>
+<hr>
+<h2>Claude as a coworker: the Slack pattern</h2>
+<p>Claude quickly became the most active “team member.” People tag <strong>@Claude</strong> the same way they tag colleagues, and they expect results just as fast.</p>
+<h3>How engineers use it</h3>
+<p>Simple tasks look like: “@Claude fix EPI-5660.” A PR appears.</p>
+<p>More powerful uses scale across the organization:</p>
+<ul>
+<li><em>“@Claude which microfrontends still use the legacy editor?”</em> → instant audit of all 219 repos.</li>
+<li><em>“@Claude migrate 13 backend repos from file-client to lambda-adapter.”</em> → completed in one session.</li>
+<li>Mass upgrades across 20+ repositories: one message triggers 6 parallel sub-agents that handle changes, tests, and PRs.</li>
+</ul>
+<p>What once took a full day of tedious cross-repo work now happens in hours. Agents worked weekends. Engineers didn&#39;t have to.</p>
+<h3>How non-engineers use it</h3>
+<p>They speak in plain product language:
+<em>- “@Claude disable drag and drop of entity table columns for embedded tables.”</em></p>
+<ul>
+<li><em>“@Claude when creating a new family in the Label Builder, the drawer should close automatically.”</em></li>
+</ul>
+<p>Claude figures out the right repositories and implementation details. Non-engineers don&#39;t need to know our tech stack or repo structure. They describe the desired outcome.</p>
+<h3>Production impact</h3>
+<p>We added Claude to <strong>#alerts-production</strong> on day two. It investigates incidents, reads logs, traces errors, and proposes fixes before most engineers open the dashboard. When a bulk action hammered Elasticsearch with 100 parallel requests, Claude designed an org-level job queue with concurrency limits that cut peak load by 90%. Engineers started replying “another one bites the dust” to resolved alerts.</p>
+<p>Within a week, Claude felt like a trusted junior-to-senior coworker: fast executor, deep historian, and reliable pair programmer. Usage spread organically to every squad.</p>
+<hr>
+<h2>What people actually built</h2>
+<h3>Non-engineer contributions (40 merged PRs from 11 people)</h3>
+<ul>
+<li><strong>Feature work</strong>: One PM built auto-tagging for file uploads (a feature he had spec’d three months earlier). Another shipped 13 PRs on messaging (bulk email templates, sidebar toggles, drawer behaviour, i18n). A go-to-market colleague delivered entire features, like pivot tables for displaying time-series data in epilot tables, that are now live for customers.</li>
+<li><strong>Daily improvements</strong>: Customer success shipped portal config changes they handle every day. Designers and support added FullStory tracking and started prototyping new UI flows.</li>
+<li><strong>Translations</strong>: Native speakers cleared 116 German translation improvements with almost no engineering involvement.</li>
+<li><strong>UX via vibecoding</strong>: A designer shipped a UX improvement to our Flow Hub before heading into the weekend: when creating a new Flow, users now get prompted to enter a name first. She described it as &quot;vibe coding&quot; and the change reduced friction in a way she&#39;d been wanting to fix for a while.</li>
+</ul>
+<p>These were not toy changes. Several were meaningful, customer-facing updates. One PM even asked Claude to create a demo video of the feature it just built, so he could share it with the team. The full cycle from spec to demo, handled through conversation with an agent.</p>
+<h3>Engineer contributions (589 merged PRs)</h3>
+<p>Engineers use agents across the full lifecycle. Writing RFCs and technical designs. Implementing multi-service features. Running tests. Shipping to production. Auditing feature flag usage across 15 repos and cleaning up stale flags. Investigating production incidents from alert channels before anyone opens a dashboard.</p>
+<p>Some of the most valuable uses are research and diagnostics. &quot;Which services listen to the file upload event?&quot; &quot;How many microfrontends still use the legacy editor?&quot; &quot;Audit all listSchemas calls and upgrade to the new summary API where safe.&quot; These are questions that used to take half a day of grepping across 219 repos. Claude answers them in minutes.</p>
+<p>GitHub Codespaces turned out to be a key piece for engineers too. Running Claude Code in auto-mode in a cloud sandbox means you can kick off a multi-repo migration and let it run without risking your work laptop. No local state to corrupt, no accidental changes to your working branch. The sandbox spins up with the full codebase mirrored and Claude works through the task autonomously. Engineers now run 6 parallel sub-agents in Codespaces for bulk upgrades across 20+ repos: package bumps, migration scripts, test updates, PRs opened. What used to be a full day of copy-paste across repos is done in one session.</p>
+<h3>The new collaboration model</h3>
+<p>Non-engineer describes the problem in business terms → Claude implements → engineer reviews for architecture and quality. The person closest to the customer now helps ship the solution. Feedback loops tightened dramatically.</p>
+<p>A designer and engineer even deployed <a href="https://www.agentation.com/">Agentation</a> (a prompt-structuring tool) in 2.5 hours. The designer now uses it daily and calls it a “dream collaboration.”</p>
+<hr>
+<h2>Guardrails: the hard lesson</h2>
+<p>A few weeks in, one non-engineer with full GitLab push access bypassed our CI pipeline and deployed code to production without review. No damage, but it was exactly the wake-up call we needed.</p>
+<p>We immediately tightened permissions: non-engineers and agents create PRs; engineers review and merge. No direct push to protected branches.</p>
+<p>But that incident was just one piece. When you give AI agents to 50+ non-engineers, you need a proper governance framework. We built one.</p>
+<h3>What we had from day one</h3>
+<ul>
+<li><strong>Sandboxed execution only.</strong> Agents run in Claude Code Web, Codex sandbox, or GitHub Codespaces. No production infrastructure access. No deployment outside CI.</li>
+<li><strong>Dedicated bot users.</strong> Limited API scopes. Code-level access only. Zero access to customer data, session tokens, or production databases.</li>
+<li><strong>Public channels only.</strong> All agent interactions happen in shared Slack channels. Engineers see everything and can intervene. No private DMs with agents.</li>
+<li><strong>Human responsibility.</strong> You trigger the agent, you own the output. No exceptions.</li>
+</ul>
+<h3>What we added after</h3>
+<p>We published a formal <strong>Agentic AI Tool Usage Guideline</strong>. The core principle: give the agent the minimum access it needs for the task at hand, and nothing more.</p>
+<p>The guideline includes:</p>
+<ul>
+<li><strong>A three-tier data classification.</strong> Red (never share with AI): customer PII, session tokens, credentials, security documents. Yellow (anonymise first): user research transcripts, survey responses, usage metrics with identifiers. Green (safe): public docs, your own drafts, anonymised research, process docs. Hard line on red: no exceptions, no &quot;just this once.&quot;</li>
+<li><strong>An approved connector matrix.</strong> Every tool combination (Claude + Figma, Claude + Atlassian, Claude + Miro, etc.) classified by risk level with specific conditions and recommended settings.</li>
+<li><strong>Prompt injection awareness.</strong> Use a separate browser profile for Claude browser extension. Don&#39;t paste content from untrusted sources into agent prompts. Disconnect MCP connectors when not in use.</li>
+<li><strong>Explicit dealbreakers.</strong> Leaking customer personal data, unauthorized code deployment, and feeding company data into model training are not allowed regardless of how useful the outcome might be.</li>
+<li><strong>GDPR and EU AI Act compliance.</strong> The guideline maps our practical rules to specific legal obligations: data minimisation (Art. 5), DPA requirements (Art. 28), AI literacy obligations (Art. 4), transparency requirements (Art. 50). We&#39;re a European company serving energy utilities. Regulatory compliance is table stakes.</li>
+</ul>
+<p><strong>Lesson</strong>: Lock down merge and push permissions <em>before</em> opening access. We got lucky. And build the governance framework early. Guardrails didn&#39;t slow adoption; they accelerated trust and usage.</p>
+<hr>
+<h2>What surprised us most</h2>
+<ul>
+<li><strong>Adoption speed</strong>: Three one-hour onboarding sessions and people were off. Every team across the company had active contributors within three weeks.</li>
+<li><strong>Non-engineers shipping real features</strong>: I expected small fixes and translations. Instead, people from across the company delivered complete, production features.</li>
+<li><strong>Claude as institutional memory</strong>: Support now asks Claude product questions instead of hunting down engineers. It has become the fastest way to understand how anything works across five years of code history.</li>
+</ul>
+<hr>
+<h2>Beyond code</h2>
+<p>This is just one layer. My colleague Suresh built <strong>Vigilos</strong>, an internal BI agent that lets anyone query our data warehouse in natural language. Designers check average journey name lengths for UX decisions. Customer success identifies accounts with AI features disabled. Product managers run customer segment analysis in minutes.</p>
+<p>We&#39;ll share that story soon.</p>
+<hr>
+<h2>Where this goes</h2>
+<p>Two years ago I published the Product Engineer Manifesto: engineers should care about the customer, the business outcome, and the whole product.</p>
+<p>What these two months taught me is that the same mindset now applies in reverse. Give non-engineers the right tools, deep context, and sensible guardrails, and they will deliver.</p>
+<p>We&#39;re still hiring product-minded engineers. That hasn&#39;t changed. Engineers at epilot own the full product lifecycle: customer understanding, architecture, quality, reliability, and shipping. Non-engineer contributions don&#39;t reduce what we expect from engineers. They amplify it. The entire organization now ships alongside them.</p>
+<p>629 merged PRs in 60 days. 40 from non-engineers.</p>
+]]></content:encoded>
+        </item>
+        <item>
+            <title><![CDATA[We Made Coding Agents Actually Reliable By Fixing One Thing]]></title>
+            <link>https://viljami.io/feed/we-made-coding-agents-actually-reliable-by-fixing-one-thing/</link>
+            <guid isPermaLink="false">https://viljami.io/feed/we-made-coding-agents-actually-reliable-by-fixing-one-thing/</guid>
+            <pubDate>Wed, 04 Feb 2026 00:00:00 GMT</pubDate>
+            <description><![CDATA[Last week, Vercel published research showing that giving coding agents a compact index of your...]]></description>
+            <content:encoded><![CDATA[<p>Last week, Vercel published <a href="https://vercel.com/blog/agents-md-outperforms-skills-in-our-agent-evals">research showing that giving coding agents a compact index of your documentation dramatically outperforms letting them search for answers on demand</a>. Their eval results: 100% task success rate with the map approach, versus only 79% when agents had to actively look things up.</p>
+<p>Same agent, same tasks, different approach to context. The difference between working and not working.</p>
+<p>The insight clicked immediately. If we could give Claude Code reliable access to this institutional knowledge without forcing it to decide when to look things up, it would fundamentally change how people work in our codebase.</p>
+<p>So we built it.</p>
+<h2>The Context Problem</h2>
+<p>Coding agents have a token limit. A ceiling on how much information they can process at once. Think of it like working memory. You can&#39;t hand Claude Code your entire codebase and documentation library upfront. It&#39;s too much.</p>
+<p>The traditional solution is skills: the coding agent decides when it needs information and actively looks it up. &quot;I need to know about authentication, let me search for that.&quot; Sounds reasonable. In practice it creates three problems:</p>
+<ol>
+<li><strong>Decision paralysis</strong> - the agent has to decide <em>when</em> to look up docs, and it often guesses wrong</li>
+<li><strong>Async delay</strong> - every lookup is a round-trip, breaks flow</li>
+<li><strong>Sequencing conflicts</strong> - exploring code vs. consulting docs creates timing issues</li>
+</ol>
+<p>Vercel&#39;s approach flips this: give Claude Code a compressed index of what documentation exists and where to find it, <em>before</em> it starts work. The index is small enough to fit in context every turn, so it always knows what&#39;s available. When it needs details, it reads the specific file directly. No decisions, no lookups, no conflicts.</p>
+<h2>Why Compression Matters</h2>
+<p>The key innovation is compression. A full documentation tree - all the folder structures, file names, categories - takes significant space. Too much to include in every conversation turn.</p>
+<p>The compressed index uses a simple pipe-delimited format that shrinks this by ~80%:</p>
+<pre><code class="hljs">[epilot Docs Index]|root: ./.epilot-docs|00-general:{tech-stack.md,business-context.md,ci-cd.md}|01-apis:{api-design.md,calling-apis.md}|02-epilot360-microfrontends:{env-vars.md,local-dev.md}|...
+</code></pre><p>That single line tells the agent:</p>
+<ul>
+<li>Where the docs live (<code>.epilot-docs/</code>)</li>
+<li>What categories exist (<code>00-general</code>, <code>01-apis</code>, etc.)</li>
+<li>What files are in each category</li>
+</ul>
+<p>It&#39;s a table of contents, not the full book. But it&#39;s enough. The agent sees the map, understands what&#39;s available, and pulls specific files when needed. The decision-making load disappears.</p>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/2smftr4lr0o3jpr0xtxp.png" alt="Claude code actually reading docs for once before jumping into code"></p>
+<h2>Why This Matters</h2>
+<p>The accuracy improvement is significant (100% vs 79% task success), but it&#39;s not the real story.</p>
+<p>The real story is what happens when you lower the barrier to contribution. Proper context enables the person closest to the problem to fix it, regardless of job title. Your PM can fix bugs. Designers can adjust component behavior. Support engineers can patch data issues. You remove bottlenecks. Context and authority live in the same person.</p>
+<p>Coding agents are the equalizer. But they&#39;re only as good as the context you give them.</p>
+<p>Most companies will throw Claude Code at their codebase and wonder why results are inconsistent. The agent hallucinates patterns. Makes incorrect assumptions. Writes code that doesn&#39;t match conventions.</p>
+<p>The difference is context. Structured, compressed, always-available context about how <em>your</em> codebase works.</p>
+<h2>How to Build Your Own</h2>
+<p>The pattern is straightforward. Here&#39;s what we did at epilot:</p>
+<ol>
+<li><strong>Curate agent-friendly documentation</strong> - organize your internal knowledge: conventions, APIs, architectural patterns, framework usage, code style</li>
+<li><strong>Structure by domain</strong> - group related docs (general, backend, frontend, infrastructure, etc.)</li>
+<li><strong>Use descriptive filenames</strong> - the agent sees filenames in the compressed index before opening files. <code>api-design.md</code> is better than <code>guidelines.md</code>. <code>error-handling.md</code> is better than <code>errors.md</code>. Make filenames searchable and specific.</li>
+<li><strong>Automate updates</strong> - pull live data where possible (OpenAPI specs, schema definitions, framework docs)</li>
+<li><strong>Generate compressed index</strong> - use a simple format (pipe-delimited works well) that reduces the doc tree by ~80%</li>
+<li><strong>Embed in agent context</strong> - add the index to your CLAUDE.md or AGENTS.md file (the context files Claude Code reads)</li>
+</ol>
+<p>One thing worth highlighting: we don&#39;t just include our internal documentation. We also package docs for the frameworks and libraries we heavily use - single-spa, openapi-backend, openapi-client-axios, i18next, and Volt UI (our custom design system). When Claude Code needs to know how i18next pluralization works or how to register a single-spa parcel, it already has the answer. No hallucination, no outdated Stack Overflow posts, just accurate framework documentation.</p>
+<h2>What This Enables</h2>
+<p>We&#39;re already seeing daily usage across the team. Developers context-switch between services faster. Non-engineers contribute directly instead of filing tickets.</p>
+<p>But the real potential is broader: if compressed context improves coding agents for technical documentation, why stop there?</p>
+<ul>
+<li><strong>Runbooks and incident response</strong> - on-call engineers with instant access to procedures</li>
+<li><strong>Customer domain knowledge</strong> - support teams with context on product behavior</li>
+<li><strong>Business logic</strong> - product decisions and their rationale, preserved and accessible</li>
+</ul>
+<p>The pattern is the same: curate the knowledge, compress it, embed it in context, let the agent work.</p>
+<h2>The Constraints Are Disappearing</h2>
+<p>For decades, contributing to a codebase required deep technical knowledge. You needed to understand the language, the frameworks, the architectural patterns, the implicit conventions. The barrier was high.</p>
+<p>Coding agents lower it. Claude Code, Cursor, and similar tools don&#39;t replace engineers. They make technical knowledge more accessible. With the right tooling and the right context, a PM can fix bugs. A designer can adjust styling logic. A support engineer can patch data issues.</p>
+<p>The question isn&#39;t whether this is possible. It&#39;s how fast you can adapt.</p>
+<p>Organizations which enable broader contribution will move faster than those that don&#39;t. The tools exist. The research is clear. What&#39;s missing is execution.</p>
+<h2>Start Simple</h2>
+<p>You don&#39;t need to document everything upfront. Start with the knowledge that causes the most friction:</p>
+<ul>
+<li><strong>Code style conventions</strong> - how you write TypeScript, naming patterns, file structure</li>
+<li><strong>Common patterns</strong> - how you handle authentication, API calls, error handling</li>
+<li><strong>Framework specifics</strong> - non-obvious usage of your frameworks and libraries</li>
+<li><strong>Internal APIs</strong> - if you have OpenAPI specs, even better</li>
+</ul>
+<p>Create a simple doc structure:</p>
+<pre><code class="hljs">docs/
+  00-general/
+    code-style.md
+    tech-stack.md
+  01-apis/
+    api-design.md
+    calling-apis.md
+  02-backend/
+    error-handling.md
+    database-patterns.md
+</code></pre><p>Generate the compressed index (pipe-delimited format, one line per directory). Add it to your CLAUDE.md or AGENTS.md file - the context files that Claude Code and other coding agents read on startup. Done.</p>
+<p>The compressed index approach works! 🎉 Vercel&#39;s research proved it: 100% task success versus 79% without it. We&#39;ve validated it internally. Now it&#39;s about whether you&#39;ll adopt it before your competitors do.</p>
+]]></content:encoded>
+        </item>
+        <item>
+            <title><![CDATA[A Product Engineer's Letter to PMs]]></title>
+            <link>https://viljami.io/feed/a-letter-to-pms/</link>
+            <guid isPermaLink="false">https://viljami.io/feed/a-letter-to-pms/</guid>
+            <pubDate>Mon, 09 Jun 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[As product engineers, we're sharing the manifesto not as a critique of your role, but as a challenge to ourselves. Don't let us off the hook.]]></description>
+            <content:encoded><![CDATA[<p><strong>Dear PM,</strong></p>
+<p>Before anything else: thank you.</p>
+<p>The work you do, aligning stakeholders, maintaining a relationship with users, finding new opportunities and communicating them is rarely easy and often invisible. It&#39;s the kind of effort that can be underestimated from the outside. But we see it. And we respect it.</p>
+<p>As product engineers, we&#39;re sharing the manifesto not as a critique of your role, but as a challenge to ourselves. We want to step up. Not just write the code, but understand the customer. Not just deliver features, but take responsibility for outcomes.</p>
+<p>Still, we know that can come across the wrong way. The things we post: the manifestos, the bold claims, the challenges to not blindly follow roadmaps created by PMs can read like they&#39;re aimed at you. But the truth is, we&#39;re mostly talking to ourselves. Encouraging each other to break old habits and move beyond being passive implementers.</p>
+<p>We want to be useful upstream. We want to sharpen the problem definition. Bring context from past experiments. Understand your goals and constraints. Help shape what we&#39;re building before it&#39;s locked in. Not because we think we know better—but because we care deeply about getting it right.</p>
+<p>However, one of the realities we often see is that having a &quot;manager&quot; title can sometimes create an implicit hierarchy within the team. This can unintentionally lead to a dynamic where engineers are seen primarily as executors of specifications, rather than as creative contributors to the product vision.</p>
+<p>The manifesto isn&#39;t about diminishing the importance of product management or suggesting that engineers should take over your role. Rather, it&#39;s about fostering a space where engineers can engage more deeply with the product vision, contribute ideas, and help bring even more innovative solutions to life. We see this as a way to strengthen our collaboration, not replace it.</p>
+<p>So don&#39;t let us off the hook. Treat us as peers. Hold us accountable when we overstep or get lost in abstraction. And when we ask questions &quot;What&#39;s the problem? For who? Why now?&quot; see it for what it is: a desire to think with you, not just follow.</p>
+<p>Product engineering is a team sport. We&#39;re here to play it with you.</p>
+<p>Sincerely,</p>
+<p><em>Your engineer colleague</em></p>
+]]></content:encoded>
+        </item>
+        <item>
+            <title><![CDATA[A Product Engineer's Letter to Designers]]></title>
+            <link>https://viljami.io/feed/a-letter-to-designers/</link>
+            <guid isPermaLink="false">https://viljami.io/feed/a-letter-to-designers/</guid>
+            <pubDate>Mon, 09 Jun 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[Designers are like the north star: something to strive towards in terms of creativity, great taste and user empathy. We want to be closer to design, not to replace it.]]></description>
+            <content:encoded><![CDATA[<p><strong>Dear Designer,</strong></p>
+<p>I hope this letter finds you well. I wanted to take a moment to share some thoughts about how we work together, and more importantly, to express my deep appreciation for the incredible work you do.</p>
+<p>Your work is often the soul of the product. The empathy you bring, the deep research and great taste you bring add up to a joyful experience. That&#39;s what makes great products feel great. As engineers, we aspire to that level of care.</p>
+<p>As product engineers, we often find ourselves in awe of the magic that designers create. Your ability to envision user experiences, understand the needs of our customers, and translate them into beautiful, intuitive designs is truly inspiring. For many of us, designers are like the north star: something to strive towards in terms of creativity, great taste and user empathy.</p>
+<p>You might see talk of &quot;product engineering&quot; and wonder if we&#39;re trying to step on your toes. And if we&#39;re being honest, sometimes our content can come across that way. Manifestos, checklists, strong opinions—written as if we have it all figured out.</p>
+<p>But the truth is: it&#39;s mostly written for ourselves. It&#39;s a reminder to stop coding and start thinking. To look beyond the Jira ticket and ask: Does this feel right? Is it intuitive? Would we be proud to ship this?</p>
+<p>We want to be closer to design, not to replace it. Contribute our experience and expertise to it. Because we believe great products happen when engineers develop taste. Not just coding skills.</p>
+<p>We&#39;re learning. Trying to notice when something feels off. Trying to ask better questions. Trying to be more than just the dev who picks up tickets and needs to be told what to build.</p>
+<p>So don&#39;t lower your standards for us. Challenge us when we miss the mark. Treat us as partners. Help us grow into engineers who can build with you. Not after you.</p>
+<p>Because in the end, product engineering is a team sport. And we want to be teammates you can count on.</p>
+<p>Sincerely,</p>
+<p><em>Your engineer colleague</em></p>
+]]></content:encoded>
+        </item>
+        <item>
+            <title><![CDATA[Dealing with Pushback to Product Engineering]]></title>
+            <link>https://viljami.io/feed/dealing-with-pushback-to-product-engineering/</link>
+            <guid isPermaLink="false">https://viljami.io/feed/dealing-with-pushback-to-product-engineering/</guid>
+            <pubDate>Tue, 08 Apr 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[I was recently confronted by a product engineer colleague here at epilot, frustrated with some of his...]]></description>
+            <content:encoded><![CDATA[<p>I was recently confronted by a product engineer colleague here at epilot, frustrated with some of his non-engineer colleagues who didn&#39;t seem to buy into the idea of involving engineers in the product process from the start.</p>
+<p>An all too familiar and frustrating situation for many of us.</p>
+<p>You think of yourself as a proud product engineer wanting to solve meaningful problems but then get slapped with a detailed feature specification designed by a group of non-developers without your input. Now they expect you to go deliver their vision.</p>
+<p>This is very much the reality in most product teams. Calling yourself a product engineer doesn’t automatically mean your voice will be welcomed. And that’s totally okay.</p>
+<h2>The Ideal vs. the Reality</h2>
+<p>In my past writings, I&#39;ve painted the ideal: engineers who understand customer needs, question roadmaps, challenge designs, and contribute beyond code. But the reality is often much messier.</p>
+<p>Some PMs and designers love working closely with engineers. Others are still adjusting to the idea. And that’s fair. The product engineer mindset definitely isn’t the norm.</p>
+<p>Let’s not forget, PMs and designers are often under pressure too. It’s only natural they sometimes default to the most familiar and streamlined path. One that doesn’t always include engineers in the early stages.</p>
+<p>And let’s be honest. Sometimes engineers haven’t yet built the trust or skills to contribute meaningfully.</p>
+<h2>The Friction Is Normal</h2>
+<p>The moment you step outside your lane, you shouldn’t be surprised when the reaction isn’t overwhelmingly supportive.</p>
+<p>You will face skepticism.</p>
+<p>You might be seen as overstepping.</p>
+<p>You will encounter:</p>
+<ul>
+<li>Requests to give estimates for implementing someone else&#39;s design</li>
+<li>Roadmaps shared as top-down mandates</li>
+<li>UI prototypes handed over &quot;ready for dev&quot;, expecting pixel-perfect implementation</li>
+<li>Pushback from asking too many questions</li>
+</ul>
+<p>This is the price of wanting to do more than just execute. And if we’re honest, many of us haven’t always shown up in these conversations in a way that earns trust.</p>
+<p>Is this a culture problem? Not necessarily. Most teams don’t have a rule against engineers joining product discussions. It’s just not the default. It’s less about policy and more about patterns. Changing those patterns takes trust, initiative, and persistence.</p>
+<p>At the end of the day, it’s the product engineer’s job to show that product engineering actually works.</p>
+<h2>Earn the Trust</h2>
+<p>Calling yourself a product engineer isn’t a free pass. No one hands you a seat at the product table just because you want it. You must earn it. Show, don’t tell.</p>
+<ul>
+<li>Do the homework. Know the names of your customers. Know the business domain.</li>
+<li>Talk to your colleagues, not just other devs. Find opportunities to interact with customers.</li>
+<li>Ask helpful questions that sharpen the team&#39;s product thinking.</li>
+<li>Dive into data. Gather insights. Find new metrics and ways to collect useful signals.</li>
+<li>Bring value to the table. Demonstrate you understand the customer problem by making thoughtful proposals that move the product forward.</li>
+</ul>
+<p>You need to show up in demos, RFCs, testing sessions, and reviews. Not just in code commits.</p>
+<h2>Why Bother?</h2>
+<p>Because it’s worth it.</p>
+<p>We do this for our own professional pride. To put great products into the hands of happy customers. And into our portfolios.</p>
+<p>We don’t challenge product decisions because we want to take over the PM’s job or undermine the work of our teammates. We do it because we care about impact. Because we want our effort to count.</p>
+<p>Because it hurts to pour weeks of your life into something that doesn&#39;t work, only to discover it failed because no engineer was involved in the concept phase.</p>
+<h2>Our Leverage</h2>
+<p>And here’s something to remember: <strong>We, as engineers, hold real leverage.</strong> We are the only ones who can actually turn product decisions into reality. No idea ships without us.</p>
+<p>So while we may not always get a say by default, we do get a say in how we show up and how deeply we choose to care.</p>
+<p>Use that leverage wisely. And proudly.</p>
+]]></content:encoded>
+        </item>
+        <item>
+            <title><![CDATA[How I Got Product Engineering Wrong]]></title>
+            <link>https://viljami.io/feed/the-sauna-epiphany-how-i-got-product-engineering-wrong/</link>
+            <guid isPermaLink="false">https://viljami.io/feed/the-sauna-epiphany-how-i-got-product-engineering-wrong/</guid>
+            <pubDate>Sun, 13 Oct 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[If you've seen my posts lately you've probably seen a lot of talk about Product Engineers: software...]]></description>
+            <content:encoded><![CDATA[<p>If you&#39;ve seen my posts lately you&#39;ve probably seen a lot of talk about <em>Product Engineers</em>: software engineers who talk in customer problems and take pride in the products they build, not only the code and technologies they use.</p>
+<p>My core thesis is that with the rise of AI, the expectations for software engineers are being redefined, moving away from narrow programming roles: backend, frontend, C#, Java, React, etc. fast becoming obsolete due to AI tools like <a href="https://www.cursor.com/">Cursor</a> lowering the barrier of entry and unlocking productivity with any technology.</p>
+<p>The days when you could coast on your ability to churn out code are over. If you&#39;re still clinging to the idea that you&#39;re safe just because you know how to write code in a widely used language or framework you&#39;re in for a rude awakening.</p>
+<p>I believe this trend is likely to be the biggest industry shift in my lifetime, even surpassing the agile movement of the last 20 years. And I&#39;m not the only one talking about it. (<a href="https://blog.pragmaticengineer.com/the-product-minded-engineer/">#1</a>, <a href="https://hybridhacker.email/p/how-to-become-a-product-engineer">#2</a>, <a href="https://thesoftwareengineeringtimes.substack.com/p/are-product-engineers-replacing-software">#3</a>, <a href="https://saranga.dev/from-code-monkey-to-product-engineer-the-evolution-of-software-engineering-in-the-age-of-llms-3c79a508464d">#4</a>, <a href="https://thesoftwareengineeringtimes.substack.com/p/are-product-engineers-replacing-software">#5</a>)</p>
+<p>But I got it wrong.</p>
+<p>Not entirely wrong, but I made it more complicated than it needed to be. In my quest to define what it means to be a product engineer, I overlooked the power of simplicity and ironically did not think enough about the customer: the ambitious software engineer thinking strategically about their careers.</p>
+<h2>I overengineered it</h2>
+<p>In my earlier attempts to help engineers break out from purely technical roles, I published an extensive checklist to help engineers think and ask questions as product engineers. It covered everything from understanding the user and the market to measuring success and staying ahead of industry trends.</p>
+<p>Here&#39;s a taste of that checklist:</p>
+<ul>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#1-understand">1 Understand</a><ul>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#11-whos-the-user">1.1 Who&#39;s the user?</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#12-whos-the-customer">1.2 Who&#39;s the customer?</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#13-whats-the-market">1.3 What&#39;s the market?</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#14-ask-why">1.4 Ask Why</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#15-what-do-we-already-know">1.5 What do we already know?</a></li>
+</ul>
+</li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#2-craft">2 Craft</a><ul>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#21-am-i-proud-of-what-im-building">2.1 Am I proud of what I&#39;m building?</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#22-does-the-product-feel-good">2.2 Does the product feel good?</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#23-how-do-i-get-there-faster">2.3 How do I get there faster?</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#24-teamwork">2.4 Teamwork</a></li>
+</ul>
+</li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#3-growth">3 Growth</a><ul>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#31-how-do-i-measure-the-success-of-my-work">3.1 How do I measure the success of my work?</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#32-how-do-i-maximise-the-impact-of-my-work">3.2 How do I maximise the impact of my work?</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#33-how-do-i-stay-ahead-of-the-curve">3.3 How do I stay ahead of the curve?</a></li>
+</ul>
+</li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#4-product-vision">4 Product Vision</a><ul>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#41-whats-our-north-star">4.1 What’s our North Star?</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#42-how-does-my-work-impact-the-overall-design-of-the-product">4.2 How does my work impact the overall design of the product?</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#43-whats-the-ambition-level">4.3 What&#39;s the ambition level?</a></li>
+</ul>
+</li>
+</ul>
+<p>Great stuff, but let&#39;s be honest — no engineer is going to run through a 15-point checklist to make a product decision. Just seeing this long list of questions can be totally overwhelming, especially if you&#39;re used to being in a technical role.</p>
+<p>If we expect engineers to actually start doing this stuff, the core idea needs to be simple and easy to remember.</p>
+<h2>The Wake-Up Call in the Sauna</h2>
+<p>As I&#39;m writing this post, I&#39;m enjoying a company working vacation in a nice hotel in Mallorca with my epilot colleagues. I was having a conversation in the hotel sauna with a principal engineer where something he said in passing suddenly clicked for me.</p>
+<p>He was venting about some engineers on his team who seemed to be diving head first into coding without bothering to understand the problem. <em>&quot;It&#39;s so easy. Every engineer should be able to answer what problem they&#39;re solving, who the customer is, and what the impact of the work they&#39;re doing is.&quot;</em></p>
+<p>That hit me like a splash of cold water in a 100°C Finnish sauna.</p>
+<p>He was totally right.</p>
+<h2>Boiling It Down to 3 Essential Questions</h2>
+<p>To think like a product engineer, it&#39;s already enough to start with just three simple questions:</p>
+<ul>
+<li><strong>What&#39;s the problem?</strong></li>
+<li><strong>For who?</strong></li>
+<li><strong>Why is this important?</strong></li>
+</ul>
+<p>Let&#39;s dive a bit deeper into each one.</p>
+<h3>1. What&#39;s the problem?</h3>
+<p>Stop coding for a second. Do you really know what you&#39;re trying to solve? Not the ticket description in Jira, but the real-world issue. If you can&#39;t articulate the problem in simple plain English, you have no business writing a single line of code.</p>
+<h3>2. For who?</h3>
+<p>Identify your user and customer. Sometimes they&#39;re the same person; other times, they&#39;re not. Understanding who will use your product (and who will pay for it) is crucial. It shapes the way you approach the solution and helps you tailor the experience to meet their needs.</p>
+<h3>3. Why is this important?</h3>
+<p>As engineers there&#39;s never a shortage of things we could improve or implement. If solving the problem doesn&#39;t make a meaningful difference, why are you wasting your valuable time? We&#39;re not here to build features that nobody uses or cares about. Connect your work to something that actually matters and helps build your track record.</p>
+<p>By anchoring your work in these three questions, you immediately move from code monkey to a high value product-minded engineer. Still a rare breed. You&#39;re not just implementing features someone else decided to build; you&#39;re elevating yourself to a position to influence product decisions and build smarter.</p>
+<h2>Leverage Your Team—They&#39;re There for a Reason</h2>
+<p>The biggest mistake engineers make is thinking they have to find all the answers themselves.</p>
+<p>Most of us are lucky to work in a product team with other disciplines like UX researchers, designers, PMs and business stakeholders whose job is to help answer these questions.</p>
+<p>By leaning on your team, you not only find better answers but also foster a more collaborative and innovative environment.</p>
+<p>Product engineering is a team sport.</p>
+<h2>Taking Action: Start Asking the Right Questions Today</h2>
+<p>So, the next time you tackle a new topic, pause for a moment before diving into code. Ask yourself:</p>
+<ul>
+<li><strong>What&#39;s the problem?</strong></li>
+<li><strong>For who?</strong></li>
+<li><strong>Why is this important?</strong></li>
+</ul>
+<p>Write down your answers. If you don&#39;t know, reach out to your team and find out. This simple practice can transform your approach to work, leading to better decisions, more impactful solutions, and a greater sense of ownership.</p>
+<p>Congratulations, you just became a Product Engineer! </p>
+<h2>Join the Conversation</h2>
+<p>I&#39;d love to hear your thoughts on this simplified approach to product engineering. Have you tried asking these three questions in your work? What impact did it have? Share your experiences in the comments below.</p>
+<p>Consider giving the <a href="https://github.com/anttiviljami/product-engineer-manifesto">GitHub repository</a> a star if the product engineer role resonates with you!</p>
+]]></content:encoded>
+        </item>
+        <item>
+            <title><![CDATA[Everything Is a Bet]]></title>
+            <link>https://viljami.io/feed/everything-is-a-bet/</link>
+            <guid isPermaLink="false">https://viljami.io/feed/everything-is-a-bet/</guid>
+            <pubDate>Thu, 26 Sep 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[Everything is a bet. The sooner you accept that, the sooner you start making smarter bets. Here's why embracing uncertainty isn't just smart, it's necessary.]]></description>
+            <content:encoded><![CDATA[<p>Everything is a bet. The sooner you accept that, the sooner you start making smarter bets.</p>
+<p>Here&#39;s why embracing uncertainty isn&#39;t just smart—it&#39;s necessary:</p>
+<h2>Trial and Error Beats the Best Research</h2>
+<p>Nicholas Nassim Taleb, one of my favourite authors and thinkers argues that in complex systems you can&#39;t predict outcomes with precision. Instead, you should expose yourself to situations where small bets can lead to significant rewards, and failures are limited in their impact. Simple trial and error over time tends to beat every other strategy.</p>
+<p>Taleb calls it antifragility—the idea that not only can you be resilient to shocks and volatility, you can benefit from it. By allowing failure, you become stronger. Each stumble is feedback, a new learning.</p>
+<p>Consider the world of investing. High-powered hedge funds employ armies of PhDs armed with complex algorithms and predictive models. They pour millions into trying to forecast market movements. Yet, time and again, they get blindsided by events their models didn&#39;t anticipate—black swans that wipe out gains overnight.</p>
+<p>Meanwhile, index fund investors who follow a simple, trial and error approach outperform these sophisticated funds over the long haul. Their strategy isn&#39;t flashy, in fact it&#39;s remarkably simple. It doesn&#39;t rely on predicting the unpredictable; it focuses on adapting to reality as it unfolds.</p>
+<p>The lesson here is straightforward: adaptability beats elaborate strategy. Trial and error is flexible. It adapts on the fly. When you make small, calculated bets, you&#39;re not risking everything. You&#39;re gaining insights that no amount of theoretical modeling and research could provide.</p>
+<h2>Building Products Is Not a Science</h2>
+<p>There is no magic formula for success in building a product. If only it were that simple. The truth is messier. Sometimes it&#39;s being first to market with a groundbreaking new idea or technology. Sometimes it&#39;s great marketing. Sometimes it&#39;s more attractive pricing. Sometimes it&#39;s just better execution to disrupt an existing market.</p>
+<p>Take Nokia, for example—the pride of my home country Finland. 🇫🇮</p>
+<p>They dominated mobile phones but missed the smartphone revolution. Why? They treated product development like a science, shipping calculated improvements backed up by market research with each new model. But building products is more art than science. It&#39;s about gut feeling, timing, and yeah, a bit of luck.</p>
+<h2>Develop Taste</h2>
+<p>It&#39;s not enough for a product to function and have useful features; it has to feel right. That means sweating the details others overlook. It means deeply caring about the product from start to finish.</p>
+<p>Taste isn&#39;t just about aesthetics; it&#39;s about creating something people love. Apple&#39;s obsession with design and user experience set them apart because they understood this deeply.</p>
+<p>Taste isn&#39;t innate—it&#39;s developed. You don&#39;t just wake up one day with great taste. It&#39;s created through experience—by immersing yourself in your craft, by building. Each project, each line of code, each design tweak sharpens your sense of what works and what doesn&#39;t.</p>
+<p>Developing good taste is the ultimate form of professional pride. It&#39;s what allows you to move faster than others and make decisions with intuition.</p>
+<p>Yet, the idea of taste is often seen as controversial when building products. Where&#39;s the market research? Where are the numbers?</p>
+<h2>Be Data-Informed, Not Data-Driven</h2>
+<p>Data is useful, but let&#39;s not kid ourselves – it&#39;s easy to manipulate. Cherry-picked numbers and fancy charts can convince nearly anyone of anything. The strategy consulting industry are masters at this: making executives feel they&#39;re being data-driven when really the consultants are brought in to make whoever pays for them look good, and back their decisions with impressive research and presentations.</p>
+<p>Way too frequently data is only used as a tool to back up whatever decision you would have made anyways. Not to say this is done on purpose–it&#39;s just very difficult for us humans not to be biased towards our own preferences. This is confirmation bias, and even people doing actual science aren&#39;t immune to it.</p>
+<p>Data tells you what&#39;s happening now, not what could happen next. It lacks context and can&#39;t predict breakthroughs. Good data helps inform your decisions, sure, but don&#39;t let it shackle you. Balance it with taste, vision, and a willingness to defy the numbers when your intuition tells you to.</p>
+<p>Steve Jobs nailed it: &quot;People don&#39;t know what they want until you show it to them.&quot; If Apple had been data-driven, the iPhone would never have existed.</p>
+<h2>Heuristics Are Powerful</h2>
+<p>Heuristics or rules of thumb help you make decisions without drowning in analysis. The Pareto Principle is a classic: 80% of results come from 20% of efforts. Focus on what counts.</p>
+<p>Heuristics are the survival tools we develop over time, forged through countless trials and errors. They don&#39;t pretend to predict the unpredictable; instead, they offer robust strategies for navigating chaos.</p>
+<p>The most powerful heuristics are the ones you craft yourself. They&#39;re born from your unique experiences—your wins, your screw-ups, the patterns only you can see. Over time, these personalized rules become your competitive advantage.</p>
+<p>Here are some of my own heuristics:</p>
+<ul>
+<li>Show Don&#39;t Tell</li>
+<li>Every Week is Quality Week</li>
+<li>Unblock others first</li>
+<li>The Keeper Test</li>
+<li>Simplicity is worth fighting for</li>
+<li>Imposing a process is the last resort</li>
+<li>Everything is a Bet</li>
+</ul>
+<p>When faced with countless options, heuristics cut through the noise. They&#39;re not infallible, but they keep you moving. Be aware of their limits, though. They can introduce biases if you&#39;re not careful. Use them as guides, not strict laws.</p>
+<h2>It&#39;s Important to Do Things Fast</h2>
+<p>Speed matters. When you&#39;re moving quickly, you focus on what&#39;s essential. There&#39;s no time for unnecessary fluff.</p>
+<p>You learn more per unit of time because you&#39;re making contact with reality more frequently. Each iteration, each release, gives you immediate feedback. You&#39;re not theorizing in a vacuum; you&#39;re engaging with real users and real-world problems.</p>
+<p>The market doesn&#39;t reward the perfect—it rewards the first to make an impact. Google sat on their AI research while OpenAI shipped a consumer product that changed the world overnight with ChatGPT.</p>
+<p>Shipping fast isn&#39;t about lowering standards; it&#39;s about focusing on what truly matters and getting it into users&#39; hands. Research and data can be helpful, but ultimately leaders need to trust their own experience, heuristics and taste to make a bet and align everyone behind a vision and deliver.</p>
+<p>Slow is fake. It&#39;s an illusion of safety that keeps you from confronting the truths you need to hear. While you&#39;re stuck researching, planning and tweaking, the world moves on without you.</p>
+]]></content:encoded>
+        </item>
+        <item>
+            <title><![CDATA[Bullshit Tech Roles (satire)]]></title>
+            <link>https://viljami.io/feed/bullshit-tech-roles-satire/</link>
+            <guid isPermaLink="false">https://viljami.io/feed/bullshit-tech-roles-satire/</guid>
+            <pubDate>Tue, 09 Jul 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[In any sufficiently well-funded or otherwise successful tech company, a set of new roles will...]]></description>
+            <content:encoded><![CDATA[<p>In any sufficiently well-funded or otherwise successful tech company, a set of new roles will inevitably emerge—so crucial and revered by our industry that they&#39;ve practically transcended the need to produce any tangible work. These roles specialize in the fine art of enabling others, in the hopes that, one day, the actual builders might be enabled enough to deliver products to customers.</p>
+<p>I&#39;m talking, of course, about the agile coaches and scrum masters, the architects and platform engineers; the growth hackers and data-driven researchers. These vanguards of innovation are vital to any team that wants to maintain a perpetual state of being maximally enabled, well-informed, and facilitated to perform their work.</p>
+<p>Let&#39;s begin with the often underappreciated roles of agile coaches and scrum masters, the only people in a company actually certified™️ to set up the correct processes and tools to run an agile team. This, of course, is paramount for implementing agile—the popular software development philosophy that explicitly tells us to avoid focusing on processes and tools.</p>
+<p>Agile coaches and scrum masters are professionals whose primary job is to ensure all work in teams is performed in sprints, with daily stand-up meetings to guarantee everyone is constantly enabled. This allows the velocity of a team to be meticulously measured in story points, which no one quite understands, but hey, at least we&#39;re definitely data-driven.</p>
+<p>Surely, without their meticulous facilitation, teams would be left wandering aimlessly, unsure of how to break down their work into JIRA tickets. Their presence ensures that everyone stays aligned and that every team member is reminded of their blockers and sprint goals every single morning. Because nothing screams productivity like a daily stand-up where everyone takes turns saying, &quot;no updates from my side.&quot;</p>
+<p>Next, we have the architects. These exceptionally gifted, usually very senior engineers haven&#39;t touched any production code in the current decade. They are often found in their natural habitat, PowerPoint, where they sketch out their grand visions of future systems and envision platform rewrites for actual software engineers to implement.</p>
+<p>Their role is to think so far ahead that their ideas become completely theoretical, creating software designs that are so advanced, they may never actually be implemented. But that&#39;s not the point. The point is to have a shared vision, to inspire, to draw boxes and lines that will one day guide the hands of actual engineers who might one day understand what they were trying to convey.</p>
+<p>Then, there are the platform engineers. A demanding role with zero responsibility to deliver anything of value to customers. These unsung heroes dedicate their time to building and maintaining the internal tools and infrastructure that supposedly makes everyone else&#39;s job easier. Yet, their true skill lies in making things so complicated that only they can understand and manage them.</p>
+<p>They manage infrastructure, design intricate CI/CD pipelines, common libraries and tools that add layers upon layers of necessary abstraction, which they insist must be adopted and standardized across all teams. The result? All teams having to learn and depend on custom in-house tools so complex that even the slightest changes require a detailed consultation with the platform team, ensuring their perpetual job security.</p>
+<p>And then we have the growth hackers, the avant-garde marketers of the tech world. Their job is to come up with innovative ways to &quot;hack&quot; company growth, often resorting to questionable methods that straddle the line between clever marketing and outright deceit. They dive into data, running A/B tests, tweaking landing pages, and optimizing user funnels to squeeze out the tiniest incremental gains.</p>
+<p>Of course, the real growth usually comes from the core product being genuinely useful, but why let that overshadow the need for an entire team devoted to marginal tweaks and vanity metrics?</p>
+<p>Data-driven researchers are the prophets of the modern tech age. Armed with vast amounts of data and research, they uncover profound insights such as &quot;users prefer faster load times&quot; or &quot;clearer buttons improve user engagement.&quot; Their work truly brings scientific rigor, managing to bring impressive-sounding numbers and great data visualizations to argue for any side of a decision, usually the one they already went with before doing any research.</p>
+<p>These bullshit roles are the pillars upon which modern tech companies stand. They enable a culture where productivity is constantly measured, documented, and discussed, albeit often at the expense of actual productivity.</p>
+<p>Without them, who would ensure that calendars get filled with back-to-back meetings so that everyone is too busy to notice no work is getting done? Who would write all the documents and Slack messages, ensuring no detail is left unshared or undiscussed? In doing so, these roles truly create a seamless, endless flow of communication, although one might argue that less talk and more doing might yield better results. </p>
+<p>But where&#39;s the fun in that?</p>
+]]></content:encoded>
+        </item>
+        <item>
+            <title><![CDATA[The Product Engineer Checklist]]></title>
+            <link>https://viljami.io/feed/the-product-engineer-checklist/</link>
+            <guid isPermaLink="false">https://viljami.io/feed/the-product-engineer-checklist/</guid>
+            <pubDate>Tue, 04 Jun 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[How to Think Like a Product Engineer]]></description>
+            <content:encoded><![CDATA[<p><em>Download the PDF at <a href="https://productengineer.org">productengineer.org</a></em></p>
+<h2>How to Think Like a Product Engineer</h2>
+<p>The following is a checklist of questions for product engineers:</p>
+<ul>
+<li><a href="#1-understand">1 Understand</a><ul>
+<li><a href="#11-whos-the-user">1.1 Who&#39;s the user?</a></li>
+<li><a href="#12-whos-the-customer">1.2 Who&#39;s the customer?</a></li>
+<li><a href="#13-whats-the-market">1.3 What&#39;s the market?</a></li>
+<li><a href="#14-ask-why">1.4 Ask Why</a></li>
+<li><a href="#15-what-do-we-already-know">1.5 What do we already know?</a></li>
+</ul>
+</li>
+<li><a href="#2-craft">2 Craft</a><ul>
+<li><a href="#21-am-i-proud-of-what-im-building">2.1 Am I proud of what I&#39;m building?</a></li>
+<li><a href="#22-does-the-product-feel-good">2.2 Does the product feel good?</a></li>
+<li><a href="#23-how-do-i-get-there-faster">2.3 How do I get there faster?</a></li>
+<li><a href="#24-teamwork">2.4 Teamwork</a></li>
+</ul>
+</li>
+<li><a href="#3-growth">3 Growth</a><ul>
+<li><a href="#31-how-do-i-measure-the-success-of-my-work">3.1 How do I measure the success of my work?</a></li>
+<li><a href="#32-how-do-i-maximise-the-impact-of-my-work">3.2 How do I maximise the impact of my work?</a></li>
+<li><a href="#33-how-do-i-stay-ahead-of-the-curve">3.3 How do I stay ahead of the curve?</a></li>
+</ul>
+</li>
+<li><a href="#4-product-vision">4 Product Vision</a><ul>
+<li><a href="#41-whats-our-north-star">4.1 What’s our North Star?</a></li>
+<li><a href="#42-how-does-my-work-impact-the-overall-design-of-the-product">4.2 How does my work impact the overall design of the product?</a></li>
+<li><a href="#43-whats-the-ambition-level">4.3 What&#39;s the ambition level?</a></li>
+</ul>
+</li>
+</ul>
+<h2>1 Understand</h2>
+<h2>1.1 Who&#39;s the user?</h2>
+<p>As a product engineer, your #1 goal is to create happy users. These are your fans! Always start with the user!</p>
+<p>Your user is the person that primarily interacts with your product and whose experience your work will directly impact. </p>
+<p>You may have multiple user groups. People who may have varying reasons to use your product or might interact with it in different ways from different angles, maybe on different kinds of devices.</p>
+<p>You should understand how to help these users. What drives them to use your product? What delights them? What are their pains?</p>
+<p>As a product engineer you should demand and support your team find answers to these questions before jumping into writing code. </p>
+<h2>1.2 Who&#39;s the customer?</h2>
+<p>Yes, this is a different question to &quot;Who’s the user?&quot;. The customer is whoever pays for your product, not always who uses it.</p>
+<p>You should know what makes your product valuable to your customers to make better decisions on what to invest your time.</p>
+<p>Hint: If you&#39;re in B2B the answer always has to do with helping your customers save money or make more money. Understanding your customers&#39; core business is key to understanding why they would pay for your product.</p>
+<p>Most importantly, you want to make whoever is paying for your product look good. After all, they&#39;re the ones taking a risk by picking your product. You ALWAYS want to reward them for that.</p>
+<h2>1.3 What&#39;s the market?</h2>
+<p>Zooming out, let&#39;s take a look at the wider market landscape. Who are the potential customers we haven’t captured yet? Why would a customer pick a competitor’s product vs. mine? Are we leaving opportunities on the table?</p>
+<p>What can I learn from similar products in the market? What are our USPs? How do I create a competitive advantage against competition?</p>
+<p>Are there rules to the market? Are there regulations or industry standards I need to know about? Does my product have to look or feel a certain way to be taken seriously?</p>
+<p>Knowing the market and regularly bechmarking yourself against other players helps become aware of your strengths and weaknesses and give ideas for where to invest strategically in your own product.</p>
+<h2>1.4 Ask Why</h2>
+<p>This is a bit of a product thinking cliche but still holds true: always pays to ask “why” a few times to uncover root causes of problems and underlying motivations.</p>
+<p>Asking why can be helpful in almost any situation to build understanding in your team. Some examples:</p>
+<ul>
+<li>Why should we invest into building this feature?</li>
+<li>Why are customers asking for this feature?</li>
+<li>Why is this a pain for our users?</li>
+<li>Why do users give us that feedback?</li>
+<li>Why now?</li>
+</ul>
+<h2>1.5 What do we already know?</h2>
+<p>It’s smart to build on what’s already known rather than always starting from scratch.</p>
+<p>Always leverage the existing knowledge and experience of peers and leaders: founders, product leadership, designers, other product engineers, etc.</p>
+<p>Examine the status quo to see how a problem is currently solved. Look at ideas, feedback, metrics, KPIs already collected in the past.</p>
+<p>Do we have users already doing something like this? What are their existing workflows? How could we improve their experience?</p>
+<p>Am I duplicating or potentially deprecating some functionality that already exists? Could this be achieved by extending or leveraging existing features? How are competitors solving this?</p>
+<h2>2 Craft</h2>
+<h2>2.1 Am I proud of what I&#39;m building?</h2>
+<p>Your track record as a product engineer is the products and features you&#39;ve delivered. Your last feature represents your professional competence level. No excuses.</p>
+<p>Ask yourself what quality standard do I want to set for the work I put out there?</p>
+<p>Can I be proud of the product I worked on? Is my work well tested and polished? Did I cut corners where I shouldn&#39;t have?</p>
+<p>As a highly paid professional engineer your craft is to produce high quality software which includes avoiding the creation of technical debt. Never ask for permission to improve quality!</p>
+<p>What makes a great product engineer stand out from the average software engineer is an intense sense of professional pride in their work and product.</p>
+<h2>2.2 Does the product feel good?</h2>
+<p>This may be a slightly controversial take, but I believe a surprisingly large part of building great products is about developing a good taste for it.</p>
+<p>Simply knowing the difference between great vs. average and not settling for just ”ok” helps tremendously in making good decisions as a product engineer.</p>
+<p>Does the product feel smooth and consistent? Is it intuitive, simple, and familiar to the user? Or does it feel cheap and janky?</p>
+<p>Note that this doesn’t only concern the visual aspects of your product. Just slapping a fancy UI design on a shaky foundation doesn’t create a great experience.</p>
+<p>Simple. Elegant. Clean. This is what we&#39;re after as product engineers.</p>
+<h2>2.3 How do I get there faster?</h2>
+<p>The pace of innovation especially in software is so rapid that in order to be competitive you must deliver fast, early and often.</p>
+<p>Too slow and your customers will lose trust in you while your competitors overtake you.</p>
+<p>What many get wrong about agile and building products is optimizing for predictability with estimates and roadmaps. Rather, what you really should care about is visible and continuous progress towards product goals.</p>
+<p>The goal of estimates should not be to try to be as accurate as possible but rather to set ambitious and yet achievable goals for yourself.</p>
+<p>The question is not how long you think it will take to build, but how long should it take? What’s an acceptable amount of time and effort I should invest on this?</p>
+<p>What’s the rollout strategy? How do I get this into customers&#39; hands as soon as possible? What’s the MVP?</p>
+<h2>2.4 Teamwork</h2>
+<p>Building products is a team sport. </p>
+<p>You are absolutely not expected to work alone and do everything yourself from writing code to doing user research. </p>
+<p>Am I effectively communicating with my team? Am I leveraging my team members&#39; strengths? Are we celebrating our successes?</p>
+<p>Great teamwork results in great products. Invest in your team, and you will see the dividends in your product&#39;s success.</p>
+<h2>3 Growth</h2>
+<h2>3.1 How do I measure the success of my work?</h2>
+<p>Our work as product engineers is not just about building and shipping feature after feature. </p>
+<p>We make educated guesses about the most valuable thing to work on, so we should also be able to answer the question: What’s the impact of my work?</p>
+<p>How many customers did we talk to to validate our progress? Are they coming back? How much money does it generate?</p>
+<p>Use analytics tools and user feedback to help you understand what’s working and what’s not. Talk to real users to get qualitative insights about the product.</p>
+<p>Most importantly, make sure to share your outcomes openly and transparently. What did I ship in the last few months? What were the results?</p>
+<h2>3.2 How do I maximise the impact of my work?</h2>
+<p>The most important question you should regularly ask yourself is: am I focused on the right thing?</p>
+<p>Being a good engineer is finding the biggest bottlenecks that hold us back and figuring out how to solve them. You should prioritise your efforts ruthlessly.</p>
+<p>Building products is a team sport. You should actively communicate what you’re working on and why, so that others can help you and keep you accountable. Demo progress frequently and actively seek feedback.</p>
+<p>Don’t fear taking risks. Being bold and taking the lead on delivering new and innovative features you believe in can lead to big wins.</p>
+<p>Ask yourself: How can I align my work with our company goals? How does my work directly benefit our users? Is there a way I can communicate my work better to others to get better feedback?</p>
+<h2>3.3 How do I stay ahead of the curve?</h2>
+<p>Stay updated on market trends. Attend conferences, read up, follow experts.</p>
+<p>Make sure to research and benchmark competitor products, or other similar products whenever possible.</p>
+<p>Hold frequent retrospectives and brainstorming sessions. Experiment with new ideas. Encourage creativity in your team.</p>
+<p>What are the latest trends in my industry? How can I encourage innovation within my team? Are we taking enough time to learn from our successes &amp; failures?</p>
+<h2>4 Product Vision</h2>
+<h2>4.1 What’s our North Star?</h2>
+<p>To align your work in the context of the broader product vision, you should deeply care about what others in the company are doing and saying, making sure you fully understand and are committed to the overall product strategy. Asking “why” is crucial here.</p>
+<p>What are our current product goals? What’s our growth strategy? Where do we want to be in the next 2-5 years?</p>
+<p>When presenting your work it always helps to put it in the context of how it pushes us forward in the big picture. How does my work help us reach our North Star?</p>
+<h2>4.2 How does my work impact the overall design of the product?</h2>
+<p>Understanding the existing software’s design and architecture decisions helps make sure that your work fits well within the larger product design. Always consider how your work influences and is influenced by other components. </p>
+<p>When adding new functionality, you should ask: </p>
+<ul>
+<li>Could this be achieved by extending or leveraging existing core features?</li>
+<li>Does my design follow a consistent style to the rest of the product?</li>
+<li>Am I adding complexity or reducing it?</li>
+</ul>
+<p>Simplicity is worth fighting for.</p>
+<h2>4.3 What&#39;s the ambition level?</h2>
+<p>It’s a good idea to define the ambition level when setting off to build something new. Are you aiming for an incremental improvement or a revolutionary new functionality? </p>
+<p>Is this feature a USP or a basic expectation? What’s the ROI on building this feature? Does it make sense to spend the effort building this ourselves, or could we use an off the shelf library or service?</p>
+<p>Your time is extremely valuable. Think like an owner: Would you invest your salary to build the feature, or rather on something else?</p>
+<h2>Product Engineer Mindset</h2>
+<p>If you enjoyed this checklist, you might also like the <a href="https://github.com/anttiviljami/product-engineer-manifesto">Product Engineer Manifesto on GitHub</a>.</p>
+<p>Consider giving the repository a star if the Product Engineering philosophy resonates with you!</p>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/uhmagl9ajfaijqjslx0t.png" alt="Product Engineer Mindset"></p>
+]]></content:encoded>
+        </item>
+        <item>
+            <title><![CDATA[What is a Product Engineer?]]></title>
+            <link>https://viljami.io/feed/what-is-a-product-engineer/</link>
+            <guid isPermaLink="false">https://viljami.io/feed/what-is-a-product-engineer/</guid>
+            <pubDate>Thu, 29 Feb 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[Not Just Coders, but builders...]]></description>
+            <content:encoded><![CDATA[<p><em>Read the full Product Engineer Manifesto at <a href="https://productengineer.org">productengineer.org</a></em></p>
+<h2>Not Just Coders, but Builders</h2>
+<p>Picture this: engineers who don&#39;t just speak in code but in product design and customer problems. </p>
+<p><em>Product Engineers</em> are a special breed of engineers that don&#39;t just see themselves as coders or developers but as builders who deeply care about the products they build. </p>
+<p>They&#39;re driven by a professional pride and desire to build great products, transcending the traditional developer role to become genuine drivers who go on to put their names behind great products they themselves played a key role in shaping.</p>
+<h2>The Counter to Hyperspecialisation</h2>
+<p>The tech world has seen for a long time a trend towards hyperspecialisation, with engineering roles becoming increasingly narrow. </p>
+<p>We have <em>frontend engineers, backend engineers, iOS engineers, DevOps engineers</em>. We have developers defining their careers with a specific language: <em>JavaScript engineers, Swift engineers, C# engineers, Python engineers</em>. We even have developers that seemingly dedicate their entire careers to a single framework or tool: <em>React Engineers, .NET engineers, Unity Engineers, Ruby on Rails engineers</em>.</p>
+<p>Feels like it&#39;s only a matter of time until we see job postings seeking <em>for-loop engineers</em> and <em>variable naming</em> engineers.</p>
+<p>Jokes aside, specialisation isn&#39;t totally without its merits as it has allowed engineers to build deep expertise in specific technologies, a key component in building quality software. However, it also lead to silos where collaboration and broader product understanding became a nice-to-have, and often not even an expectation or focus for engineering roles. </p>
+<p>Product Engineers stand as a counter-movement to this trend. They embody a holistic approach to engineering, where understanding the entire product and context around it is just as important as the technical skills required to build it. This broad perspective enables them to bridge gaps between different technical domains and ensure that the product serves its customers effectively.</p>
+<h2>AI: The New Playground</h2>
+<p>The rise of artificial intelligence (AI) tools in software development is rapidly setting new expectations for engineers. With AI tools becoming more sophisticated and capable, engineers are now expected to leverage these tools to enhance their work, not just in terms of speed and efficiency but also in terms of broadening their area of responsibilities.</p>
+<p>Engineers in a post- ChatGPT and GitHub Copilot world are now expected to be able to work in more languages, incorporate more tools and libraries, and simply be able to deliver more, using a broader range of technologies and disciplines in their daily work.</p>
+<p>It&#39;s probably not a great time to be the platform engineer whose job is to set up Jenkins pipelines for the product teams, when ChatGPT can easily help teams do it themselves.</p>
+<p>For Product Engineers however this has unlocked a higher level of abstraction. With AI tools handling more of the routine and specialised tasks, engineers can allocate more time to creative problem-solving, ideation, and exploring new ways to meet customer needs. </p>
+<p>This new level of abstraction allows Product Engineers to concentrate on product strategy, user experience, and overall system architecture without being bogged down by the intricacies of individual technologies.</p>
+<p>The incorporation of AI into software development encourages a broader perspective, where the choice of technology becomes a means to an end, rather than an end in itself.</p>
+<p>While AI didn&#39;t create the Product Engineer role (examples have been around for much longer); AI has made becoming a true Product Engineer much more accessible as a career path for software engineers.</p>
+<h2>Combining Product Thinking and Technical Execution</h2>
+<p>Product thinking involves understanding the user&#39;s needs, the market demands, and the business goals that drive a product&#39;s development. It&#39;s about seeing beyond the immediate task to grasp how each piece fits into the broader puzzle of the user experience. </p>
+<p>Product Engineers ask the crucial questions: &quot;How does this feature add value to the user? What impact will this improvement have on the product&#39;s overall vision? How can we measure the success of our work?&quot;</p>
+<p>They don&#39;t just build features based on specifications; they contribute to the design and roadmap of the product through a robust understanding of the customer&#39;s needs and business strategy.</p>
+<p>This approach requires a balance of skills: the ability to dive deep into coding and system architecture, while also keeping an eye on the product roadmap and customer feedback.</p>
+<p>By combining this mindset with quality technical execution, Product Engineers can uniquely ensure the product is headed to the right direction both technically and strategically, ensuring that their work directly contributes to the product&#39;s long term success.</p>
+<h2>The Manifesto: A call to Product Engineers</h2>
+<p>I&#39;ve published a <a href="https://github.com/anttiviljami/product-engineer-manifesto">Product Engineer Manifesto</a> on GitHub to more formally define the Product Engineer mindset. </p>
+<p>Consider giving the repository a star if Product Engineering philosophy resonates with you!</p>
+<p><a href="https://github.com/anttiviljami/product-engineer-manifesto"><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/z1yxmqp0dtrbo6qjiqq7.png" alt="Manifesto"></a></p>
+]]></content:encoded>
+        </item>
+        <item>
+            <title><![CDATA[After 3 years: Bets I made as Head of Engineering rewriting the epilot SaaS – worth it?]]></title>
+            <link>https://viljami.io/feed/after-3-years-bets-i-made-as-head-of-engineering-rewriting-the-epilot-saas-worth-it/</link>
+            <guid isPermaLink="false">https://viljami.io/feed/after-3-years-bets-i-made-as-head-of-engineering-rewriting-the-epilot-saas-worth-it/</guid>
+            <pubDate>Thu, 15 Feb 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[In this post, we take a look back at some of the most influential decisions I implemented early on in...]]></description>
+            <content:encoded><![CDATA[<p>In this post, we take a look back at some of the most influential decisions I implemented early on in our SaaS rewrite journey at <a href="https://epilot.cloud/en">epilot</a> and evaluate how well each one has played out after 3 years.</p>
+<p><a href="#conclusion-was-the-rewrite-a-good-idea">Skip ahead</a> or read on until the conclusion for a full verdict of whether rewriting our app was a good idea to begin with.</p>
+<h2>Doubling down on AWS &amp; serverless</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>To be fair, AWS was already the de-facto cloud platform used by the epilot team before I joined.</p>
+<p>My contribution was to convince the team to go all in on a serverless architecture with an ambitious strategy to rewrite and replace our proprietary Java-based 3rd party monolith running on EC2, piece by piece with functionalities leveraging serverless AWS offering.</p>
+<p>After 3 years, there are no regrets to choosing to be fully vendor-locked with AWS for the speed, scalability and minimal operations overhead it provides.</p>
+<h2>Microfrontends with single-spa</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>The decision early on to take a microservices approach in our frontend was made out of purely practical reasons.</p>
+<p>Frankly our small team who lead the work on the new platform didn&#39;t have the time, the confidence, nor the desire to make long term decisions on the frontend tech stack, tooling and important design decisions on behalf of all our other teams, present and future.</p>
+<p>I&#39;m extremely happy we went down this path instead of imposing one framework and toolset for everyone. The <em>single-spa</em> approach lets us improve our frontend game each time a new microfrontend gets added to our application, which by now has happened more than 30 times! We&#39;ve even ended up replacing entire MFEs (microfrontends) a few times, which isn&#39;t as bad as it sounds when the codebases are kept relatively small.</p>
+<p>Notably the microfrontend approach also helped us support the transition from the legacy product to the new one, as we were able to treat the legacy app as just one of our many (micro)frontends, and slowly replace functionalities one by one by shipping new microfrontends.</p>
+<h2>Using React without a framework</h2>
+<p><strong>Bad bet 💸</strong></p>
+<p>I know, <em>&quot;skill issue&quot;</em>, right? But honestly I&#39;ve found that even the really senior (read: expensive) React engineer hires tend to struggle with performance and end up wasting a lot of time on fixing major performance issues with React applications when they start to do anything meaningful.</p>
+<p>Starting over, I would probably spend a bit more time choosing a React framework that works well in a microfrontend environment rather than encouraging all teams to start from scratch, and establishing no-framework as the implicit default.</p>
+<p>Controversial: I might not even pick React for most MFEs anymore. We already use <em>Svelte</em> in parts of our app, and turns out <em>Sveltekit</em> works super well in a single-page-app environment like ours!</p>
+<h2>RFCs</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>The practice of writing RFCs to collaborate on software design and async decision making was one of the first and best things I introduced joining epilot.</p>
+<p>To this day we use RFCs as the main way to share ideas and be transparent about the work that our engineers do. I&#39;d consider this one a very good bet and would absolutely recommend a culture of writing RFCs for all product organizations.</p>
+<h2>API First</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>We give a ton of freedom to engineers to pick whatever languages, tools and techniques they see fit, but the one thing I&#39;ve always demanded from our teams has been to design using machine-readable API contracts, such as <em>OpenAPI</em> or <em>GraphQL</em>.</p>
+<p>I would say this is internally the most important way we collaborate on our software&#39;s design, using shared types and automated tests to ensure our implementations follow the common API contracts. This approach has radically reduced bugs and allowed our engineers to work together efficiently leveraging platform features built and maintained by other teams.</p>
+<p>On top of that, being API First and publicly building and sharing our API contracts has allowed our customers and partners to effortlessly build on our product, and integrate it deeply with their own IT landscape using our API &amp; SDK.</p>
+<h2>Continuous production deploys from <code>main</code></h2>
+<p><strong>Bad bet 💸</strong></p>
+<p>Turns out our customers simply did not tolerate the frequent changes and inevitable rollbacks of this approach.</p>
+<p>We technically still ship continuously from <code>main</code> to our production environment, with an average of 150 production deployments every week, (with a lot of tests!), but now ship a monthly stable snapshot release to paying customers, and heavily utilise feature flags to roll out changes.</p>
+<h2>Not using feature flags from the beginning</h2>
+<p><strong>Bad bet 💸</strong></p>
+<p>We did use GitLab feature flags on launch, but they were only used to turn features on/off between stages (<code>dev</code>, <code>staging</code>, <code>production</code>).</p>
+<p>Turns out this wasn&#39;t enough. Our teams really needed better tools to give us fine-grained control over rolling out features to specific customers. </p>
+<p>Going back, I wish we had started earlier with something like <em>LaunchDarkly</em>.</p>
+<h2>Hiring product-focused senior engineers remotely</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>This is a decision I&#39;m very proud of. Keeping an almost unreasonably high bar to getting hired and seeking out individuals who care about the product, our customers and our business has allowed us to build and retain a motivated team with zero managers and architects. </p>
+<p>Making engineer hiring remote-first allowed us to tap into an international pool of senior talent resulting in a team of more than 30 exceptional and motivated hands-on <em>Product Engineers</em> from more than 10 countries working for us, and growing... ❤️</p>
+<h2>In-house DevOps / platform team</h2>
+<p><strong>Bad bet 💸</strong></p>
+<p>We tried to establish a platform team on two separate occasions but both times the team struggled to produce value for our teams. The DevOps engineer hired to lead the second platform team ended up leaving us for a bigger company after a few months.</p>
+<p>Looking back, part of the reason for this was likely a combination of leveraging managed/serverless services that don&#39;t require much in-house automation work, and hiring senior engineers who can automate things for themselves when needed.</p>
+<p>We&#39;ve recently started experimenting working with a 3rd party DevOps consultancy to join us on a project-basis to help us with non-product related engineering tasks such as optimising our CI/CD pipelines.</p>
+<p>Regardless, we don&#39;t anymore see any need to hire and establish an in-house DevOps team, or get into <em>Platform Engineering</em> of any sort in the foreseeable future.</p>
+<h2>Weekly Demos</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>The all-hands weekly demo is still easily my favourite recurring event at epilot. It&#39;s like having a company-wide celebration of shipping things, every week!</p>
+<p>The weekly demo brings not only a positive buzz around all the cool stuff being built, but also the expectation that engineers personally showcase concrete customer value created in their teams every week. It keeps us accountable for consistent delivery and maintains a rapid feedback loop with the rest of the company.</p>
+<h2>Open-Source Engineering Principles</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>Transparently laying out our Engineering Principles in a <a href="https://github.com/epilot-dev/engineering-principles">public GitHub repo</a> helped set clear expectations for our culture internally, and perhaps even more importantly for engineer candidates, many of whom have testified making the decision to apply at epilot because of our principles resonating with their own beliefs. </p>
+<h2>Hasura</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>One of the early key bets was the decision to use <em>Hasura</em> to interface with our legacy database to break up the monolith into microservices.</p>
+<p>Event triggers listening on DB changes and pushing messages to SQS while using the GraphQL API to implement 2-way data sync with the legacy app turned out to be a great and reliable event-driven pattern for breaking up the monolith step by step.</p>
+<p>Since shutting down the legacy product last year, <em>Hasura</em> was decommissioned together with the legacy Postgres database, but it truly served its purpose well during the migration to serverless. 🫡</p>
+<h2>DynamoDB as our go-to database</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>We haven’t had any fundamental issues with DynamoDB single table design in our backend microservices. </p>
+<p>Of course it’s not suitable for every use case, and we have turned to <em>Aurora serverless</em>, <em>Elasticsearch</em>, and even <em>InfluxDB</em> in a few special cases, such as for search and analytical needs. But for 80% of the time, DynamoDB is fast, convenient and extremely worry-free as a default application database. </p>
+<h2>AWS OpenSearch service</h2>
+<p><strong>Bad bet 💸</strong></p>
+<p>We started out on <em>Amazon OpenSearch Service</em> (still called <em>Elasticsearch service</em> back then) but were struck with a pretty bad incident where our domain became completely non-responsive in our development environment and the only thing we could do was to contact AWS support to resolve the issue. This was totally unacceptable for us as we heavily rely on Elasticsearch for our main functionalities.</p>
+<p><em>Elastic Cloud</em> ended up being far more reliable and manageable for us in the end. Having a self-service reboot button on the interface makes all the difference!</p>
+<p>However with both providers rolling out their serverless solutions, which would be extremely attractive to us, we&#39;re keeping our eyes open and are open to experimenting again with <em>AWS OpenSearch</em> offering.</p>
+<h2>Datadog for observability &amp; monitoring</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>Datadog is one of those tools that once you get used to it, you wonder how you ever lived without it.</p>
+<p>The value we get from Datadog&#39;s UI for logs, traces, monitors and dashboards is insane, and absolutely worth every penny.</p>
+<p>We use Datadog RUM for browser &amp; UX monitoring. The RUM sessions and logs are extremely helpful for tracking down frontend crashes and bugs, as well as visually understanding user behaviours.</p>
+<p>On top of that, we use pipeline observability to analyse CI pipelines, custom metrics to track business &amp; application KPIs, and cloud security management for compliance reporting and threat detection.</p>
+<h2>Datadog for incident management &amp; post-mortems</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>Datadog Incident Management has been absolutely vital in making sure we take the right steps to analyse and learn from our incidents. We use it during incidents for coordination and communication, as well as after the fact for post-mortem and analysis of past incidents and trends.</p>
+<h2>Datadog for browser tests</h2>
+<p><strong>Bad bet 💸</strong></p>
+<p>Datadog synthetic browser tests were great to get started fast but quickly became slow, expensive, hard to expand and simply not good enough for our team. </p>
+<p>We ended up switching over to <em>Playwright</em>.</p>
+<h2>Redshift Serverless</h2>
+<p><strong>Bad bet 💸</strong></p>
+<p>Quite slow. Very expensive. At least for our use case of generating dashboards with Spectrum querying mostly parquet files from S3.</p>
+<p>Our team is currently investigating replacing Redshift with <em>Clickhouse</em>.</p>
+<h2>Microservices</h2>
+<p><strong>It&#39;s complicated 😎</strong></p>
+<p>At this point I&#39;ve stopped referring to our product as having a <em>microservices</em> architecture. I don&#39;t find it a very helpful abstraction to understand a large, event-driven, interconnected product that&#39;s mostly FaaS.</p>
+<p>Yes, we still develop and deploy our services as independent domain-specific modules with well-defined APIs.</p>
+<p>In reality however our application is used by the customer as one big product with all the pieces needing to connect and work together to provide a service.</p>
+<p>Thus, we must also test and ship the product as one. (Really, we have one large shared e2e test project that blocks all pipelines. When we&#39;re shipping our monthly stable release, we take a snapshot of all our bundles and ship those in one atomic import map file.)</p>
+<p>I simply find it more useful to think of our product as one monolith, made up of a large number of independent infrastructure &amp; FaaS modules with APIs.</p>
+<h2>Conclusion: Was the rewrite a good idea?</h2>
+<p>If you ask me now I would never recommend any SaaS company take the decision to fully rewrite their software. It&#39;s generally just a pretty dumb and painful thing to do. 😅</p>
+<p>For epilot sadly we were left with no other choice.</p>
+<p>The legacy version of our SaaS was built on top of a proprietary 3rd-party low-code platform <em>Axon Ivy</em>, which by no means was designed to run a multi-tenant SaaS, but that the external epilot dev team from Vietnam (affiliated with Axon) had managed to wrangle to work.</p>
+<p>The fact that epilot was able to build a successful and fast-growing business on top of what&#39;s essentially a hacked low-code business process automation tool, is the ultimate proof to me that the tech stack really doesn&#39;t determine a company&#39;s success!</p>
+<p>But we were seriously starting to hit the limits of our software, especially when it came to scalability and speed of development. We didn&#39;t even have access to the source code so that we could take over the development of the core application. All we could do was upgrade to new versions provided by the vendor and continue to hack the software to make it do more things it wasn&#39;t designed for.</p>
+<p>Simply put, it wasn&#39;t sustainable for a fast growing software company. No developer wants to work on software like this. Especially not the talented and ambitious ones we wanted to work with.</p>
+<p>It took us nearly 3 years, but in the end we managed to reach feature parity, replace, migrate and shut down the legacy app, with very little churn, growing year-over-year and last year <strong>doubling our MRR</strong> while migrating the last customers over to the new platform.</p>
+<p>Feels good to say we&#39;re only getting started with our new 360 platform.</p>
+<p>Looking back at the last 3 years, while I would never recommend anyone pursue a rewrite for a running SaaS business, while simultaneously trying to build a healthy, ambitious engineering team and culture, I&#39;m convinced that for epilot this was the (only) way to go, and we&#39;re much better for it.</p>
+<p>In the end we at epilot overwhelmingly consider this a…</p>
+<p><strong>Good bet 👍</strong></p>
+<h2>What&#39;s next?</h2>
+<p>To keep things short in this post, I&#39;ll publish a separate Part 2 where I share our latest bets focused on building epilot into the next SaaS Unicorn. 🦄</p>
+<p><em>Mandatory recruitment disclaimer</em>: If this post made you at all curious, please check out our <a href="https://docs.epilot.io/docs/intro">docs</a> and check our <a href="https://epilot.cloud/en/career-jobs/#:~:text=Discover%20now-,We%20are%20looking%20for%20you!,-HR">open positions</a> for more!</p>
+]]></content:encoded>
+        </item>
+        <item>
+            <title><![CDATA[How we do engineering @ epilot]]></title>
+            <link>https://viljami.io/feed/how-we-do-engineering-at-epilot/</link>
+            <guid isPermaLink="false">https://viljami.io/feed/how-we-do-engineering-at-epilot/</guid>
+            <pubDate>Sun, 22 Jan 2023 00:00:00 GMT</pubDate>
+            <description><![CDATA[Ever since open-sourcing our core Engineering Principles back in January 2021, I regularly get asked...]]></description>
+            <content:encoded><![CDATA[<p>Ever since open-sourcing our core <a href="https://github.com/epilot-dev/engineering-principles">Engineering Principles</a> back in January 2021, I regularly get asked by candidates how and if the principles really work in practice at epilot.</p>
+<p>In this post, I&#39;ll attempt to give a glimpse of concrete tools and practices we use in our product team to give an idea of how we apply our principles and what the engineering culture really looks like from the inside.</p>
+<h2>Team Structure</h2>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/42k3bz1nb6ycc0xr1pxk.jpg" alt="Engineering team group picture"></p>
+<p>At time of writing, the epilot engineering team consists of 25 full-time remote software engineers organized into 6 squads, each with its own Product Manager and a shared design team of 4 talented product &amp; UX designers.</p>
+<p>Each squad is led by an engineer team lead, principally responsible for the team&#39;s delivery and engineer wellbeing.</p>
+<p>The product leadership team is responsible for communicating our product strategy and maintains a <a href="https://medium.com/the-creative-strategist/why-now-next-later-is-one-of-the-best-frameworks-for-roadmapping-4d547a2f2692">Now-Next-Later</a> roadmap, but ultimately it&#39;s the squads that make all delivery decisions.</p>
+<p>Squads are formed around specific business domains within the epilot 360 platform, architected around <a href="https://domaindrivendesign.org/ddd-domain-driven-design/">Domain Driven Design</a> and micro-ish services both in the backend and frontend.</p>
+<h2>Show, Don&#39;t Tell</h2>
+<p>We value real concrete working software, not roadmaps and fancy presentations.</p>
+<p>Engineers showcase features in a weekly all-hands Product Demo session: a company-wide celebration and ruthless feedback session. 🎉</p>
+<p>Features being demoed are deployed to production but are usually hidden behind a <a href="https://www.getunleash.io/">Feature Toggle</a>, giving demo participants a chance to test and give feedback on features before release.</p>
+<p>Most squads use a Kanban-style flow with a weekly planning cycle, but opt to showcase their progress every 2 weeks, with some squads hosting extra demos called &quot;Open Houses&quot; on off-weeks.</p>
+<p>The engineering team also hosts an internal bi-weekly &quot;Tech Exchange&quot; to wind down with a beer, but also present and demo cool technical things.</p>
+<h2>API-first &amp; serverless</h2>
+<p>The epilot backend is built as serverless microservices written mostly in Typescript, leveraging services such as AWS Lambda, Step Functions, EventBridge, API Gateway and AppSync.</p>
+<p>DynamoDB is the most popular database solution enhanced by managed data stores such as Elasticsearch Cloud, Aurora Serverless and Redshift Serverless.</p>
+<p>Our backend is pretty event-driven, with heavy use of EventBridge, SQS and Step Functions to implement asynchronous business logic.</p>
+<p><a href="https://docs.epilot.io/docs/architecture/overview"><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/xgjoo96jraez8ar3a8re.png" alt="epilot tech stack"></a></p>
+<p>Our frontend application consists of microfrontends written in React and Svelte orchestrated by the <a href="https://single-spa.js.org/">single-spa</a> framework.</p>
+<p>The epilot frontend is entirely built on the same APIs we expose to our customers and technical partners via our open-source <a href="https://github.com/epilot-dev/sdk-js">SDK</a> and public documentation.</p>
+<p>We like open standards, so our APIs are defined using common machine-readable specs like GraphQL and OpenAPI.</p>
+<p>We find the domain-driven architecture approach an efficient way to organize our teams to act independently while collaborating on software design with an <a href="https://dev.to/epilot/why-we-design-apis-first-e85">API-first</a> approach.</p>
+<p>Organizing our codebase with microservices helps our fully remote engineering team focus on delivery and minimize <a href="https://en.wiktionary.org/wiki/bikeshedding">bikeshedding</a> over non-critical engineering decisions.</p>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/wx4e95wjngxcf7im0z0f.png" alt="Microfrontends"></p>
+<h2>Freedom and Responsibility</h2>
+<p>Ok, I freely admit we stole this one from the <a href="https://jobs.netflix.com/culture">Netflix culture deck</a>. Shoulders of giants and so on. ♥</p>
+<p>At epilot, every hire is trusted and treated as an adult from day one. We only hire smart people who we can trust and aren&#39;t afraid to terminate a relationship if that trust is broken.</p>
+<p>We expect engineers to operate by principles and think strategically to benefit our customers and our business. (Max-the-MRR)</p>
+<p>We intentionally make it very difficult to create company-wide policies to control which tools to use, what employees should be allowed to do and how they should organize their daily work.</p>
+<p>It should be hard to introduce new processes but easy to get rid of existing bad ones.</p>
+<p>The exception to this rule is security.</p>
+<p>We encourage team members to challenge the status quo with RFCs proposing ways to improve the product and our ways of working.</p>
+<h2>RFCs - Solutions Over Problems</h2>
+<p>Among other things, RFCs written by engineers have so far led us to adopt continuous deployment, harden security, establish new teams, and even <a href="https://dev.to/epilot/my-first-year-as-epilots-head-of-engineering-killing-the-legacy-monolith-25c2#:~:text=The%20radical%20360%20plan">rewrite the entire product in a different tech stack</a>.</p>
+<p>These are often simple documents that start out by just describing a problem and expressing a wish or an idea to solve it.</p>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/05wyg0jyd30oruzonlxr.png" alt="RFC"></p>
+<p>RFCs at epilot have no official approval process. We expect the author to champion their proposal by garnering relevant feedback from peers and stakeholders, and then make an informed decision on how to proceed.</p>
+<p>In most cases, the RFC author leads by example and implements the proposal themselves, usually just within her squad at first.</p>
+<p>Good ideas spread and are adopted through all teams, not by mandate from above, but by actually improving the quality of our work.</p>
+<blockquote>
+<p><strong>Edit:</strong> A total of 192 RFCs have been published in our Confluence since they were introduced 2 years ago. 🔥</p>
+</blockquote>
+<h2>Every Week is Quality Week</h2>
+<p>The name of this principle came about after a group of engineers expressed concern about technical debt in their project due to pressure to deliver against deadlines.</p>
+<p>At the time, it was already an established practice to <a href="https://github.com/anttiviljami/romero-programming-principles#principle-6-fix-bugs-immediately">fix bugs immediately</a> and treat all types of bugs as critical, but many engineers still felt that they couldn&#39;t go against the wishes of product managers to follow the practice.</p>
+<p>It was proposed to have a &quot;quality week&quot; at the end of every quarter to give engineers time to focus on quality topics.</p>
+<p>As the quarter came to a close, we announced the quality week with instructions to all squads to focus solely on bugs, technical debt and other quality improvements they felt were important.</p>
+<p>During the quality week, our engineers were extremely motivated to fix long-time issues that had affected our customers.</p>
+<p>We made real, significant progress that week and everyone could see it.</p>
+<p>On Monday following the first quality week, we opened <a href="https://github.com/epilot-dev/engineering-principles/pull/8">this PR</a>, making an announcement that every week from now on would be quality week:</p>
+<p><a href="https://github.com/epilot-dev/engineering-principles/pull/8"><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/mb6wkx3bdlfzoqucdb8d.png" alt="Every Week is Quality Week PR"></a></p>
+<p>It worked. We&#39;re still starting a new quality week every Monday.</p>
+<h2>No-Ops &amp; Continuous Deployment</h2>
+<p>At epilot you will find a distinct lack of epilot-specific shared tooling. We actively avoid building our own tools and standardizing configurations and instead encourage using open-source tools like AWS CDK, <a href="https://github.com/awslabs/aws-lambda-powertools-typescript">lambda-powertools</a> and <a href="https://single-spa.js.org">single-spa</a> to build our product.</p>
+<p>We don&#39;t have dedicated DevOps engineers or a platform team to build custom tools and pipelines or run k8s clusters.</p>
+<p>We expect squads to independently automate testing, deployment and monitoring of their features to minimize the need for manual operational tasks.</p>
+<p>Engineers really get to pick any tools they like to do their job, as long as they weigh tech decisions against our principles.</p>
+<p>I sometimes get engineers pushing me to leverage my position as head of department to standardize tech choices across the entire engineering team, but so far the approach of giving teams radical freedom has yielded organic adoption of best practices and tools where needed anyways.</p>
+<p>Without extra push, all teams have converged to using the same GitLab CI templates, connecting up with <a href="https://docs.datadoghq.com/continuous_integration/">Datadog</a> to continuously deploy code with synthetic browser tests integrated into the pipeline to make sure we catch problems before they get to production.</p>
+<p>The whole team also uses Datadog (another RFC) as the central observability solution to know what&#39;s happening in our platform at all times.</p>
+<p>When stuff goes wrong, engineers owning the feature jump on a Slack huddle using Datadog&#39;s incident management feature to coordinate the response, cleanup and write a post-mortem.</p>
+<h2>Why principles matter</h2>
+<p>When I joined epilot, I made it my personal mission to build an engineering culture that I would personally want to join and be part of.</p>
+<p>To me, the <a href="https://github.com/epilot-dev/engineering-principles">engineering principles</a> are like a founding document; a source code or DNA of how to build a great engineering team.</p>
+<p>I&#39;m proud of how far we&#39;ve come, but there&#39;s still lots to learn and improve as we grow and mature as a product team.</p>
+<p>I fully expect that in 2 years, writing this blog post would look very different as the industry moves forward with new tools and practices. I hope that these principles will stick.</p>
+<p>If the topics in this post resonated with you, make sure to check out our <a href="https://docs.epilot.io/">dev docs</a> and see our <a href="https://epilot.cloud/en/career-jobs/">open positions</a>!</p>
+]]></content:encoded>
+        </item>
+        <item>
+            <title><![CDATA[First year as Head of Engineering @epilot - Killing the Legacy Monolith]]></title>
+            <link>https://viljami.io/feed/my-first-year-as-epilots-head-of-engineering-killing-the-legacy-monolith/</link>
+            <guid isPermaLink="false">https://viljami.io/feed/my-first-year-as-epilots-head-of-engineering-killing-the-legacy-monolith/</guid>
+            <pubDate>Fri, 17 Jun 2022 00:00:00 GMT</pubDate>
+            <description><![CDATA[This post is a personal account of my experience at epilot.cloud and our journey rebuilding our...]]></description>
+            <content:encoded><![CDATA[<p>This post is a personal account of my experience at <a href="https://epilot.cloud/en/">epilot.cloud</a> and our journey rebuilding our legacy Java monolith SaaS from the ground up with AWS, serverless and microfrontends, mostly during 2021.</p>
+<p>The text is written from the perspective of engineering and focuses on the challenges I faced taking on leadership of our growing team of 25+ engineers.</p>
+<p>I fully acknowledge this is not the complete picture of epilot&#39;s growth during this time as we have many other amazing departments and individuals working to make epilot the next tech unicorn success story.</p>
+<p>Full disclosure, I love this company and am heavily invested in the product&#39;s success after my first year and a half. 💙</p>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/5ybon69p9qvdgay6b7vh.jpg" alt="Cologne Carnival"></p>
+<p>(I&#39;m the one dressed up as the doctor for our company&#39;s annual Cologne carnival celebration)</p>
+<h2>Beginnings</h2>
+<p>I joined the Cologne-based startup epilot in October 2020 as a cloud engineer to head a new platform team and aid the product team transition to serverless AWS.</p>
+<p>The task felt right in my wheelhouse.</p>
+<p>By that time I already had three real serverless products under my belt, had experience migrating monoliths to microservices, and had acquired more than 8 years of professional experience in total as a developer and team lead working mostly with AWS and other cloud platforms.</p>
+<p>I knew startups. I had experience with the business domain. I knew the technology well.</p>
+<p>This was my time to shine.</p>
+<h2>Build better software, faster.</h2>
+<p>As our CTO Szilard Toth put it in our first discussions, my job description was to help us &quot;build better software, faster&quot;.</p>
+<p>I took that mission statement very seriously.</p>
+<p>Coming off a 4-year stint at <a href="https://futurice.com">Futurice</a>, a lean service design focused consultancy, my first instinct was to make a current state analysis of my new company - epilot.</p>
+<p>To get my bearings, I joined one of the engineering teams and got busy.</p>
+<p>I learned about the challenges our teams were facing and got a deeper view into our legacy product, which had already been in active development for more than 3 years.</p>
+<p>We were already doing a lot of things right: All three teams at the time were generally following agile practices, engineers were eager to discuss and learn their new tools, many had even taken the time to get AWS certified.</p>
+<p>But there were certainly some big concerns.</p>
+<p>At the end of my first full month, I was ready to present my learnings to the company.</p>
+<h2>First insights</h2>
+<p>I published an internal document titled &quot;epilot Tech Review&quot; detailing my assessment of the current state of epilot&#39;s engineering.</p>
+<p>These were the main findings:</p>
+<ol>
+<li>The decision made (before my time) to pick AWS, serverless and React as our foundation was a good one for what the team wanted to achieve: Low operating costs and high development speed. This was especially great for hiring due to many candidates being attracted to these modern technologies.</li>
+<li>Our teams lacked experience working with these technologies. Progress was slow and unfortunate decisions were made with the very first small scale serverless projects.</li>
+<li>Alarmingly, the engineering team had no viable plan or strategy to migrate the legacy product to the new serverless architecture. Everyone was excited about the new tech but we clearly had no clue how to actually build our product with it.</li>
+</ol>
+<p>I emphasised in the document how important it was for epilot&#39;s success to move away from the legacy technology stack, a proprietary monolithic Java framework which had already proven to be a poor fit for our use case, difficult to run and extremely slow to develop new features on.</p>
+<p>Our ability to deliver as an engineering team was looking pretty grim. The company had already invested a full year into going serverless with not much to show for it.</p>
+<p>To make matters worse, some of our key engineers had just announced they were leaving the company.</p>
+<p>In spite of our woes on the engineering side, epilot had a rare advantage:</p>
+<p>A proven product-market fit – Even with our product leaving much to be desired, our paying customers were becoming fans!</p>
+<p>Yes, they were sometimes frustrated with the quality of the software and our inability to deliver features they were asking for, but they were totally bought into the vision of what epilot could be and we were clearly delivering value for them.</p>
+<p>I think this was thanks to our visionary leadership with deep industry knowledge knowing which problems to solve along with a great sales team and a MacGyver-like customer success team working around the limitations of our software.</p>
+<p>We had the right idea, just not a great technical execution yet.</p>
+<p>Luckily I knew I could make a difference when it comes to execution.</p>
+<h2>RFCs and API first</h2>
+<p>I went on to establish the platform team I was hired for. We started small with myself and an SRE who had been at epilot a year before me.</p>
+<p>The first things the team tackled were improvements to developer workflows such as enabling an <a href="https://dev.to/epilot/why-we-design-apis-first-e85">API Design First approach</a> for our serverless APIs and building common CI/CD pipelines for the tools our teams were using.</p>
+<p>I introduced RFCs for the teams as a tool to discuss designs and proposals to improve our product and work.</p>
+<p>With key engineers leaving us, it was important to establish an open culture with teams making independent decisions while focusing on good software design and communication.</p>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/s6ofxs17i2550m8mttjq.png" alt="RFCs"></p>
+<p>As one of the very first RFCs shared, I laid out my admittedly optimistic plan to move away from our legacy monolith app.</p>
+<h2>The radical 360 plan</h2>
+<p>I brought my plan directly to senior company leadership triggering a series of discussions in late 2020 to figure out our legacy migration strategy.</p>
+<p>In sessions with our CEO Michel, CTO Szilard and head of sales Marlon, it became very clear this would not be just a migration from monolith to serverless. We needed to build the new version of epilot SaaS with a radically different design, starting from a new flexible data layer to power the diverse set of use cases our customers were asking for.</p>
+<p>We called it epilot 360. And it would be my job to build it.</p>
+<p>From the start of 2021, we established a new strike team to head the effort of building 360. I doubled as the leader of both the platform team and the new 360 team.</p>
+<p>The 360 plan was radical. We would completely rebuild our main portal interface using frontend microservices and embed the old product into the new portal as a microfrontend to provide backwards compatibility while we rebuild and migrate features one by one in the new serverless world.</p>
+<p>Getting the old monolith to work in the new portal was our first big technical hurdle. We developed a &quot;headless&quot; mode for the old app, where the UI was modified to fit into the new portal layout and implemented secure communication with the parent 360 app to pass information like the current user&#39;s session to the legacy app.</p>
+<p>From the data side, we continued to split up the legacy SQL database into serverless microservices. We introduced <a href="https://hasura.io/">Hasura</a> to act as the gateway to synchronise data between the legacy database and our new serverless services.</p>
+<p>By March 2021, we had migrated our first module to 360 using the new flexible data model and had shipped a new portal microfrontend for it.</p>
+<p>We introduced <a href="https://www.datadoghq.com/">Datadog</a> for centralised logging and monitoring, as well as to provide crucial analytics and observability tools for our new serverless product.</p>
+<p>Finally in July of 2021, we greeted all our users with a whole new 360  login and portal experience, wrapping the old familiar app in our brand new look with serverless features already replacing many legacy views.</p>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/w624qiz00mq762xdyh7o.png" alt="New 360 Login"></p>
+<p>This felt like the first big launch of 360. Although lots of work was still ahead to fully get rid of our legacy app, our users were happy to see us start to deliver on our promises with a new major release of the epilot product.</p>
+<p>From here on the rate of new releases in our app would radically increase.</p>
+<h2>Head of Engineering</h2>
+<p>In May of 2021, I was officially promoted to head of engineering which meant I was no longer just in charge of the platform team and the 360 team. I was now in charge of the entire engineering team with our CTO shifting his focus away from engineering to product management.</p>
+<p>In the meantime we had also ramped up our recruitment efforts. We published our in-house <a href="https://github.com/epilot-dev/engineering-principles">engineering principles</a> and built a new recruitment landing page <a href="https://promise.epilot.cloud/">promise.epilot.cloud</a> to showcase our culture. As a result, we managed to acquire some amazing new engineering talent during 2021. &lt;3</p>
+<p>So far it had been mostly just my small team of 4 developers working on 360. Now as the new head of department, I needed to shift the focus of all our by now 25+ engineers and 6 teams to work on the new 360 platform.</p>
+<p>This came with some major challenges.</p>
+<h2>Scaling the team</h2>
+<p>One of the biggest challenges was the radically different underlying design of 360 with its flexible data model as opposed to our legacy product&#39;s traditional static data model.</p>
+<p>Teams initially struggled to wrap their heads around the new <a href="https://docs.epilot.io/docs/entities/flexible-entities">flexible entities</a>; not least because of my struggle to communicate it properly. Through some much needed visual design support and hands-on experience with the product, we slowly built up an understanding of our new 360 product together.</p>
+<p>A major focus of the architectural design of 360 was on modularity by utilising frontend and backend microservices combined with our API First software design approach.</p>
+<p>This was to allow teams to work independently giving them the freedom to choose their own tools and ways to solve problems.</p>
+<p>We found this approach to be a big success as it kept our projects small with teams motivated to try out new technologies, share and learn from other teams, and quickly change approaches when needed.</p>
+<p>After the first few months of teams working on 360 it was clear that we were able to move much faster than ever before with our new tech stack.</p>
+<p>We adopted continuous deployment across all teams and quickly surpassed an average of &gt;100 production releases each week. This was a huge achievement considering that back when I joined we were able to deploy only 1-2 times per week during a pre-defined maintenance window!</p>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/p8bt6azzs70scun0o57v.png" alt="Production Deployments Graph"></p>
+<p>By the end of 2021, all our teams had shipped major features on the 360 product and we had reached enough feature parity for the first new users to be onboarded to epilot completely on 360 with no trace of the legacy product.</p>
+<p>We had an MLP - Minimum Lovable Product!</p>
+<p>Things would speed up even more throughout the first half of 2022 with teams getting comfortable with 360, shipping more serverless features to get us closer to the magical feature parity state with our rather large legacy product.</p>
+<p>We opened up the 360 platform to external developers and partners with our <a href="https://docs.epilot.io/">public developer docs</a> and <a href="https://github.com/epilot-dev/sdk-js/">open source SDK</a>.</p>
+<p>In the meantime our sales and customer success teams have been actively engaged with existing customers to help them migrate to 360. More and more users are now adopting the new features each week and we’re learning from them to make 360 even better.</p>
+<h2>Takeaways from the first year</h2>
+<p>As I&#39;m writing this post in June 2022, after my first full year as head of engineering and after almost a year of running the main epilot application in production on AWS serverless and frontend microservices, I can&#39;t help but ask myself:</p>
+<p>Was 360 a success?</p>
+<p>While my ego would love to give a resounding &quot;Yes!&quot; as the answer, I can&#39;t be fully satisfied until we&#39;ve fully completed the migration of all features from the legacy app and have successfully shut down the old monolith and moved on with happy users.</p>
+<p>We&#39;re not quite there yet.</p>
+<p>Are we building better software, faster? – Yes! The feedback from our customers is very positive and our product teams are delivering features 10x faster than we were back in 2020 when I joined. We&#39;re demoing new features every week now!</p>
+<p>Are we on track getting rid of our legacy monolith? – Yes! At the time of writing, we&#39;re close to 90% feature parity with more users hopping over to 360 each week.</p>
+<p>Was it way more difficult than initially thought? – Heck yes! The people side of things turned out to be much more complex than the technical side – as always.</p>
+<p>It isn’t easy to align 5 remote product teams to work on a new product redesigned and rebuilt from the ground up.</p>
+<p>It isn&#39;t easy to introduce big changes to our tech stack, product, and engineering culture.</p>
+<p>It isn&#39;t easy to keep our users happy while introducing a new product with major design changes and new concepts to learn.</p>
+<p>While none of these things are easy, they are surely worthwhile and we strive to get better every day.</p>
+<h2>Conclusion</h2>
+<p>Looking back, I&#39;ve learned a lot in the past year about leadership, engineering and building products.</p>
+<p>With our engineer teams now working well, I&#39;ve been able to focus my daily work on helping our customers and technical partners hands-on with their adoption of 360. This has really helped me gain better perspective on where the 360 product stands today from our users&#39; perspective.</p>
+<p>I&#39;ve received a ton of feedback; from customers, from colleagues, and from our leadership team.</p>
+<p>I’m glad to say things are looking bright for epilot 360!</p>
+<p>Still lots to learn and build.</p>
+]]></content:encoded>
+        </item>
+        <item>
+            <title><![CDATA[API First: How Teams Collaborate on Software Design]]></title>
+            <link>https://viljami.io/feed/why-we-design-apis-first/</link>
+            <guid isPermaLink="false">https://viljami.io/feed/why-we-design-apis-first/</guid>
+            <pubDate>Thu, 17 Dec 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[TL;DR:   APIs are the single most useful design tool for teams collaborating on software. Teams who...]]></description>
+            <content:encoded><![CDATA[<p><img src="https://dev-to-uploads.s3.amazonaws.com/i/ra5ayqosajpsvy8iqa17.png" alt="Winter is here"></p>
+<p><strong>TL;DR:</strong></p>
+<ul>
+<li>APIs are the single most useful design tool for teams collaborating on software.</li>
+<li>Teams who focus on API design produce better designed software and collaborate more efficiently by parallelising their work around concrete technical contracts.</li>
+<li>Thinking of APIs as the core way to add features into software leads into building up a platform for developers to bootstrap new features on top of a library of existing core APIs.</li>
+</ul>
+<h3>Software Design &amp; Features</h3>
+<p>As developers we intuitively think of features as the basic building blocks for the software we design and build.</p>
+<p>Features are the capabilities our software provides. They answer the question: What does the software do?</p>
+<p>We design software around features. Some features are user-facing while many features are purely technical and serve internal purposes to make the system as a whole work. </p>
+<p>A software team will add new features, extend existing features and sometimes deprecate and remove old features to be succeeded by new improved ones.</p>
+<p>Tests are used to describe features as code and make sure they follow the intended design.</p>
+<p>This happens regardless of whether a team follows agile methods and talks about <em>epics</em> and <em>user stories</em> instead of features. These are just tools to help decide which features the software should have and how to prioritise building them.</p>
+<h3>The Problem</h3>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/i/k5f1bmonht2jzmh97go7.png" alt="The Problem"> </p>
+<p>In a small team of up to 5-8 people working on the same project, it&#39;s still relatively easy to keep track of all features and come together to make decisions on software design.</p>
+<p>This is no longer the case when you scale to multiple teams working on the same software.</p>
+<p>Questions like these become increasingly harder to answer:</p>
+<ul>
+<li>Which team should be responsible for this feature?</li>
+<li>Can I change this feature without breaking other parts of the software?</li>
+<li>How was this feature intended to be used?</li>
+<li>Could this feature I&#39;m building also be useful to other teams?</li>
+</ul>
+<h3>Technical Debt</h3>
+<p>As a result, software teams easily get into situations where the quality of the software starts to suffer; ultimately leading to unmotivated and poorly performing teams having to constantly deal with symptoms of technical debt:</p>
+<ul>
+<li>Inconsistent APIs, bad design</li>
+<li>Features overlapping in functionality</li>
+<li>Tightly coupled features that are hard to extend without breaking things</li>
+<li>Having to look into implementation to understand what each piece does</li>
+<li>&quot;That one thing only Sam knows about&quot;</li>
+</ul>
+<p>How do we fix the problem of multiple teams and individuals collaborating on the same software?</p>
+<h3>Software Architecture</h3>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/i/4atfby7w634t1yvdeks5.png" alt="Software Architecture"> </p>
+<p>This is the point we start taking the idea of software architecture seriously. Maybe even hire some people with <em>Architect</em> in their job title to solve the problem.</p>
+<p>Software architecture on the surface is about designing and organising the pieces that make up software to make it easier to understand and keep developing.</p>
+<p>For our purposes, I would argue it&#39;s also about helping teams collaborate and organise their codebases by providing a common language and a set of abstractions to communicate about the design of the system.</p>
+<p>Here are a few popular architectural patterns a software architect may suggest to help design your software:</p>
+<ul>
+<li><a href="https://dev.to/microtica/the-concept-of-domain-driven-design-explained-1ccn">DDD (Domain Driven Design)</a></li>
+<li><a href="https://medium.com/@shivendraodean/software-architecture-the-onion-architecture-1b235bec1dec">Onion Architecture</a></li>
+<li><a href="https://www.ibm.com/cloud/learn/soa">SOA (Service Oriented Architecture)</a></li>
+<li><a href="https://dev.to/microtica/everything-you-need-to-know-to-get-started-with-microservices-5243">Microservices</a></li>
+<li><a href="https://dev.to/heroku/best-practices-for-event-driven-microservice-architecture-2lh7">Event-Driven Architecture</a></li>
+</ul>
+<p>One thing all these patterns have in common is they attempt to abstract the software into a set of smaller, encapsulated units of software.</p>
+<p>Most of the units expose an API. An interface to allow other parts of the software to interact with it.</p>
+<h3>API as a Design Tool</h3>
+<p>So it turns out thinking about APIs is pretty important for software architecture.</p>
+<p>I would go as far as to say the majority of all software in existence is there to provide APIs for other pieces of software. Think software libraries, OOP interfaces, operating systems: software meant to be used by other software with APIs.</p>
+<p>In fact APIs are so important, I&#39;d argue API design is the single most useful design tool for teams collaborating on software design.</p>
+<p>Not UML diagrams.</p>
+<p>Not entity relationship diagrams.</p>
+<p>Not abstract architecture diagrams.</p>
+<p>API Design.</p>
+<h3>Why API Design?</h3>
+<p>If software architecture is about building elaborate systems of features provided by small encapsulated units of software, and those features are mainly manifested as APIs, how can we possibly avoid talking about API design as the centerpiece of the whole design?</p>
+<p>That would be like designing a public transportation system without looking at the connections between lines.</p>
+<p>Or designing a factory line without looking at how the materials move between the machines.</p>
+<p>I imagine those things would be very difficult to do.</p>
+<h3>API First Design</h3>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/i/2qx1syyoa8eofg7ocmxi.png" alt="API First Design"> </p>
+<p>Next time your team starts working on a feature, after you&#39;ve drafted a design for how the feature might look like to the user, design the APIs needed for that feature.</p>
+<p>Try designing the APIs with code. Make sure not to start implementing it yet. Use types, interfaces or technical API definition standards.</p>
+<p>Here are some popular standard tools for designing HTTP APIs:</p>
+<ul>
+<li><a href="https://www.postman.com/api-design/">Postman</a></li>
+<li><a href="https://graphql.org/learn/schema/">GraphQL Type Language</a></li>
+<li><a href="http://spec.openapis.org/oas/v3.0.3">OpenAPI Specification</a></li>
+<li><a href="https://www.asyncapi.com/">AsyncAPI Specification</a></li>
+</ul>
+<p>Share the API design. Include it as part of a proposal or RFC (request-for-comments). Provide examples for how the API would be used. Invite colleagues to give feedback and make suggestions (PRs) to improve the design. </p>
+<p>Once the comments stop coming in, run with it. This API will now become part of the beautiful software you&#39;re building together.</p>
+<h3>Efficiency</h3>
+<p>In addition to producing higher quality software, teams who focus on API design first are able to work more efficiently by parallelising work around the API contract.</p>
+<p>Because APIs work like contracts, they can have a future start date. A promise that this API will exist in the software at a later date.</p>
+<p>Even before a team starts implementing an API, other teams can already start building new software depending on the technical definition of the API.</p>
+<p>Mocks can be used to test the software even before a single line of code has been written to implement the API. </p>
+<p>Changes to the API can be proposed with concrete PRs. This is a lot easier while the API only exists as a design with no implementation.</p>
+<p>This is a really powerful way to parallelise work and avoid blocking dependencies between teams.</p>
+<h3>Example of an API First Workflow</h3>
+<p>Let&#39;s say we have two product teams working on an Ecommerce app, both with their own backlogs and user stories they wish to deliver.</p>
+<p><strong>Team Alpha</strong> plans to add a price notification feature that lets users know when pricing has changed on products they saved in a watchlist.</p>
+<p><strong>Team Omega</strong> plans to add a new improved search feature that provides product recommendations for users based on their purchase history and products they have saved in a watchlist.</p>
+<p>Both teams need a watchlist feature to implement their end-to-end user stories.</p>
+<h3>A Story of Collaboration</h3>
+<p>Team Alpha starts working on their price notification story by producing some UI wireframes alongside API designs as OpenAPI definition files in a git repository.</p>
+<p>The designs are included as part of a company internal RFC document describing the solution for price notifications.</p>
+<p>Omega team views the RFC and notices that Alpha&#39;s proposal includes the watchlist feature they need but the Watchlist API is missing a way to fetch all saved products for a user, a feature needed to come up with the recommendations for Omega&#39;s search feature.</p>
+<p>Omega then makes an adjustment in the OpenAPI definition adding the missing feature to the API design and submits a PR, which gets merged after review from Alpha.</p>
+<p>As both teams are happy with Alpha&#39;s proposed design, Alpha gets to work on their price notification feature.</p>
+<p>Meanwhile Omega submits their own RFC proposal with designs for the improved search feature using the Watchlist API definition as part of the solution. After some collaborative iteration on the RFC document, Omega is ready to continue with their own feature.</p>
+<p>Both teams work on their respective features in parallel, mocking the Watchlist API to test out their features.</p>
+<p>Later, Alpha informs Omega that the Watchlist API has been implemented as part of their sprint. Omega tests the newly implemented API and is happy to see their search feature now working as designed.</p>
+<p>Using this workflow, both teams efficiently collaborated on the design of the software using RFC documents to describe their solutions, including technical API designs to enable working with version control and Pull Requests, both teams working in parallel to complete their user stories.</p>
+<h3>Platform of Features</h3>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/i/tjlhl300h0loun1mf7aj.png" alt="Platform of Features"> </p>
+<p>As teams focus on APIs first, they end up building up a platform of features.</p>
+<p>Focusing on well designed APIs to build end-to-end features, the APIs will implement platform features that can be leveraged by other teams working on other parts of the software.</p>
+<p>Smart companies will start building up a Developer Portal, a central repository for the technical API definitions and start providing tools and well written documentation to consume platform APIs.  Maybe even release language-specific SDKs to make consuming versioned APIs as easy as installing software packages.</p>
+<p>At this stage you have a level 4 API First engineering organisation (see: <a href="https://dev.to/epilot/4-levels-of-api-adoption-2i0p">4 Levels of API adoption</a>) with teams able to iterate fast by collaborating on the software design on a detailed level, constantly expanding the platform with new APIs and tools to build and consume them.</p>
+<p>This is a good place to be. 💙</p>
+]]></content:encoded>
+        </item>
+        <item>
+            <title><![CDATA[Testing React With Jest and OpenAPI mocks]]></title>
+            <link>https://viljami.io/feed/testing-react-with-jest-and-openapi-mocks/</link>
+            <guid isPermaLink="false">https://viljami.io/feed/testing-react-with-jest-and-openapi-mocks/</guid>
+            <pubDate>Fri, 12 Jun 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[Kent C. Dodds recently wrote a very interesting post calling an end to mocking window.fetch when...]]></description>
+            <content:encoded><![CDATA[<p>Kent C. Dodds recently wrote a <a href="https://kentcdodds.com/blog/stop-mocking-fetch">very interesting post</a> calling an end to mocking <code>window.fetch</code> when testing React applications:</p>
+<blockquote class="twitter-tweet"><a href="https://twitter.com/x/status/1270359083409965057"></a></blockquote><p>He was right.</p>
+<p>I just recently had to migrate a React project from a fetch based API client implementation to an <a href="https://github.com/anttiviljami/openapi-client-axios">axios based one</a> where the tests heavily relied on mocking <code>global.fetch</code>. It very quickly became apparent why this is not good practice.</p>
+<p>I ended up having to write my own test utility that would mock both fetch and the new API client. It never looks good when you have to change tests to prove your code didn&#39;t change anything for the user.</p>
+<p>As a better alternative, Kent suggests using a <em>Mock Service Worker</em>. More specifically the <a href="https://github.com/mswjs/msw">msw module</a> to essentially run a mock backend as a service worker that intercepts all outgoing API requests to handle them.</p>
+<h3>Setting up msw</h3>
+<p>Setting up a mock backend with msw for your React tests turns out to be a fairly easy process. To get a deeper picture you should check out <a href="https://kentcdodds.com/blog/stop-mocking-fetch">Kent&#39;s original post</a>, but here&#39;s all you really need to do in your test code to mock a REST endpoint:</p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> { rest } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;msw&#x27;</span>;
+<span class="hljs-keyword">import</span> { setupServer } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;msw/node&#x27;</span>;
+
+<span class="hljs-keyword">const</span> server = <span class="hljs-title function_">setupServer</span>(
+  rest.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/api/pets&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">req, res, ctx</span>) =&gt;</span> {
+    <span class="hljs-keyword">const</span> pets = [{ <span class="hljs-attr">id</span>: <span class="hljs-number">1</span>, <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;Garfield&#x27;</span>, <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;cat&#x27;</span> }];
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">res</span>(ctx.<span class="hljs-title function_">json</span>({ pets }));
+  }),
+);
+
+<span class="hljs-title function_">beforeAll</span>(<span class="hljs-function">() =&gt;</span> server.<span class="hljs-title function_">listen</span>());
+<span class="hljs-title function_">afterAll</span>(<span class="hljs-function">() =&gt;</span> server.<span class="hljs-title function_">close</span>());
+</code></pre><p>One of the reasons this is extremely cool is because it avoids the pain of having to start up a real local mock backend, such as an express server that needs to be bound to a specific port on the host running the test.</p>
+<p>This helps keep your tests fast and simple to run, as they should be.</p>
+<h3>Even better with OpenAPI</h3>
+<p>As someone who works a lot with API backends that (hopefully!) provide Swagger/OpenAPI definitions, I had already been mocking my backends in React tests using OpenAPI mocks with <a href="https://github.com/anttiviljami/openapi-backend">openapi-backend</a>. When I learned about <code>msw</code>, I was thrilled!</p>
+<p>It turns out <code>msw</code> together with <code>openapi-backend</code> is the perfect combination for mocking REST apis.</p>
+<p>To provide a full mock for an API, all I need is to create a mock backend with openapi-backend using the API definition and tell msw to use it:</p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> { rest } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;msw&#x27;</span>;
+<span class="hljs-keyword">import</span> { setupServer } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;msw/node&#x27;</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">OpenAPIBackend</span> <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;openapi-backend&#x27;</span>;
+<span class="hljs-keyword">import</span> definition <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;./path/to/definition.json&#x27;</span>;
+
+<span class="hljs-comment">// create our mock backend with openapi-backend</span>
+<span class="hljs-keyword">const</span> api = <span class="hljs-keyword">new</span> <span class="hljs-title class_">OpenAPIBackend</span>({ definition });
+api.<span class="hljs-title function_">register</span>(<span class="hljs-string">&#x27;notFound&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">c, res, ctx</span>) =&gt;</span> <span class="hljs-title function_">res</span>(ctx.<span class="hljs-title function_">status</span>(<span class="hljs-number">404</span>)));
+api.<span class="hljs-title function_">register</span>(<span class="hljs-string">&#x27;notImplemented&#x27;</span>, <span class="hljs-title function_">async</span> (c, res, ctx) =&gt; {
+  <span class="hljs-keyword">const</span> { status, mock } = api.<span class="hljs-title function_">mockResponseForOperation</span>(c.<span class="hljs-property">operation</span>.<span class="hljs-property">operationId</span>);
+  ctx.<span class="hljs-title function_">status</span>(status);
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">res</span>(ctx.<span class="hljs-title function_">json</span>(mock));
+});
+
+
+<span class="hljs-comment">// tell msw to intercept all requests to api/* with our mock</span>
+<span class="hljs-keyword">const</span> server = <span class="hljs-title function_">setupServer</span>(
+  rest.<span class="hljs-title function_">all</span>(<span class="hljs-string">&#x27;/api/*&#x27;</span>, <span class="hljs-title function_">async</span> (req, res, ctx) =&gt; api.<span class="hljs-title function_">handleRequest</span>(
+    {
+      <span class="hljs-attr">path</span>: req.<span class="hljs-property">url</span>.<span class="hljs-property">pathname</span>,
+      <span class="hljs-attr">query</span>: req.<span class="hljs-property">url</span>.<span class="hljs-property">search</span>,
+      <span class="hljs-attr">method</span>: req.<span class="hljs-property">method</span>,
+      <span class="hljs-attr">body</span>: req.<span class="hljs-property">bodyUsed</span> ? <span class="hljs-keyword">await</span> req.<span class="hljs-title function_">json</span>() : <span class="hljs-literal">null</span>,
+      <span class="hljs-attr">headers</span>: { ...req.<span class="hljs-property">headers</span>.<span class="hljs-property">raw</span> },
+    },
+    res,
+    ctx,
+  )),
+);
+
+<span class="hljs-title function_">beforeAll</span>(<span class="hljs-function">() =&gt;</span> server.<span class="hljs-title function_">listen</span>());
+<span class="hljs-title function_">afterAll</span>(<span class="hljs-function">() =&gt;</span> server.<span class="hljs-title function_">close</span>());
+</code></pre><p>Now instead of having to write your own mock handlers for each operation, they&#39;re generated from the response schemas and examples defined in the OpenAPI document.</p>
+<p>What&#39;s more: any time the API definition changes, all your mocks will be automatically updated giving you further confidence your app is compatible with the new API version.</p>
+<h3>Enabling Request Validation</h3>
+<p>When testing, it&#39;s often very useful to make sure your application is actually sending the correct requests to the API.</p>
+<p>Working with OpenAPI definitions has the benefit that API operations are well defined and requests can be automatically validated using JSON schema.</p>
+<p>To enable request validation during tests, you can simply register the <a href="https://github.com/anttiviljami/openapi-backend/blob/master/DOCS.md#validationfail-handler">validationFail handler</a> for openapi-backend:</p>
+<pre><code class="hljs language-javascript">api.<span class="hljs-title function_">register</span>(<span class="hljs-string">&#x27;validationFail&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">c, res, ctx</span>) =&gt;</span> <span class="hljs-title function_">res</span>(
+  ctx.<span class="hljs-title function_">status</span>(<span class="hljs-number">400</span>),
+  ctx.<span class="hljs-title function_">json</span>({ <span class="hljs-attr">error</span>: c.<span class="hljs-property">validation</span>.<span class="hljs-property">errors</span> }),
+));
+</code></pre><p>When running tests, a malformed call to an API endpoint will now result in a 400 Bad Request error from the mock backend, alongside a useful error message telling you what&#39;s wrong with the request.</p>
+<h3>Custom Handlers</h3>
+<p>In some tests it might make sense to provide a different mock than the default one as provided by openapi-backend.</p>
+<p>Registering your own mock for an API operation in a test is as simple as calling <code>api.register()</code> with the operationId and a mock handler:</p>
+<pre><code class="hljs language-javascript"><span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;should call getPets operation&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-comment">// given</span>
+  <span class="hljs-keyword">const</span> mockResponse = [{ <span class="hljs-attr">id</span>: <span class="hljs-number">2</span>, <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;Odie&#x27;</span> }];
+  <span class="hljs-keyword">const</span> mockHandler = jest.<span class="hljs-title function_">fn</span>(<span class="hljs-function">(<span class="hljs-params">c, res, ctx</span>) =&gt;</span> <span class="hljs-title function_">res</span>(ctx.<span class="hljs-title function_">json</span>(mockResponse)));
+  api.<span class="hljs-title function_">register</span>(<span class="hljs-string">&#x27;getPets&#x27;</span>, mockHandler);
+
+  <span class="hljs-comment">// when</span>
+  <span class="hljs-comment">// render(&lt;MyComponent /&gt;)...</span>
+
+  <span class="hljs-comment">// then</span>
+  <span class="hljs-title function_">expect</span>(mockHandler).<span class="hljs-title function_">toBeCalled</span>();
+});
+</code></pre><h3>Conclusion</h3>
+<p>Finding out about msw was a major game changer for my React testing. This in combination with the auto-mocking capabilities of <a href="https://github.com/anttiviljami/openapi-backend">openapi-backend</a> makes mocking APIs in React tests a breeze.</p>
+<p>Thank you, Kent, and the team behind <a href="https://github.com/mswjs/msw">mswjs/msw</a>! 💙</p>
+]]></content:encoded>
+        </item>
+    </channel>
+</rss>

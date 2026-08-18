@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>After 3 years: Bets I made as Head of Engineering rewriting the epilot SaaS – worth it? — Viljami Kuosmanen</title>
+  <meta name="description" content="In this post, we take a look back at some of the most influential decisions I implemented early on in..." />
+  <meta name="theme-color" content="#0e0f12" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#fafaf7" media="(prefers-color-scheme: light)" />
+  <meta property="og:title" content="After 3 years: Bets I made as Head of Engineering rewriting the epilot SaaS – worth it? — Viljami Kuosmanen" />
+  <meta property="og:description" content="In this post, we take a look back at some of the most influential decisions I implemented early on in..." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://viljami.io/feed/after-3-years-bets-i-made-as-head-of-engineering-rewriting-the-epilot-saas-worth-it/" />
+  <link rel="canonical" href="https://viljami.io/feed/after-3-years-bets-i-made-as-head-of-engineering-rewriting-the-epilot-saas-worth-it/" />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="alternate icon" href="/assets/favicon.png" type="image/png" />
+  <link rel="alternate" type="application/rss+xml" title="Viljami Kuosmanen &mdash; Feed" href="https://viljami.io/feed/rss.xml" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+
+  <main class="card feed-card post">
+    <header class="hero">
+      <p class="eyebrow"><a href="/feed/">&larr; Viljami.io / Feed</a></p>
+      <h1>After 3 years: Bets I made as Head of Engineering rewriting the epilot SaaS – worth it?</h1>
+      <p class="title">February 15, 2024</p>
+    </header>
+
+    <article class="post__body">
+<p>In this post, we take a look back at some of the most influential decisions I implemented early on in our SaaS rewrite journey at <a href="https://epilot.cloud/en">epilot</a> and evaluate how well each one has played out after 3 years.</p>
+<p><a href="#conclusion-was-the-rewrite-a-good-idea">Skip ahead</a> or read on until the conclusion for a full verdict of whether rewriting our app was a good idea to begin with.</p>
+<h2>Doubling down on AWS &amp; serverless</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>To be fair, AWS was already the de-facto cloud platform used by the epilot team before I joined.</p>
+<p>My contribution was to convince the team to go all in on a serverless architecture with an ambitious strategy to rewrite and replace our proprietary Java-based 3rd party monolith running on EC2, piece by piece with functionalities leveraging serverless AWS offering.</p>
+<p>After 3 years, there are no regrets to choosing to be fully vendor-locked with AWS for the speed, scalability and minimal operations overhead it provides.</p>
+<h2>Microfrontends with single-spa</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>The decision early on to take a microservices approach in our frontend was made out of purely practical reasons.</p>
+<p>Frankly our small team who lead the work on the new platform didn&#39;t have the time, the confidence, nor the desire to make long term decisions on the frontend tech stack, tooling and important design decisions on behalf of all our other teams, present and future.</p>
+<p>I&#39;m extremely happy we went down this path instead of imposing one framework and toolset for everyone. The <em>single-spa</em> approach lets us improve our frontend game each time a new microfrontend gets added to our application, which by now has happened more than 30 times! We&#39;ve even ended up replacing entire MFEs (microfrontends) a few times, which isn&#39;t as bad as it sounds when the codebases are kept relatively small.</p>
+<p>Notably the microfrontend approach also helped us support the transition from the legacy product to the new one, as we were able to treat the legacy app as just one of our many (micro)frontends, and slowly replace functionalities one by one by shipping new microfrontends.</p>
+<h2>Using React without a framework</h2>
+<p><strong>Bad bet 💸</strong></p>
+<p>I know, <em>&quot;skill issue&quot;</em>, right? But honestly I&#39;ve found that even the really senior (read: expensive) React engineer hires tend to struggle with performance and end up wasting a lot of time on fixing major performance issues with React applications when they start to do anything meaningful.</p>
+<p>Starting over, I would probably spend a bit more time choosing a React framework that works well in a microfrontend environment rather than encouraging all teams to start from scratch, and establishing no-framework as the implicit default.</p>
+<p>Controversial: I might not even pick React for most MFEs anymore. We already use <em>Svelte</em> in parts of our app, and turns out <em>Sveltekit</em> works super well in a single-page-app environment like ours!</p>
+<h2>RFCs</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>The practice of writing RFCs to collaborate on software design and async decision making was one of the first and best things I introduced joining epilot.</p>
+<p>To this day we use RFCs as the main way to share ideas and be transparent about the work that our engineers do. I&#39;d consider this one a very good bet and would absolutely recommend a culture of writing RFCs for all product organizations.</p>
+<h2>API First</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>We give a ton of freedom to engineers to pick whatever languages, tools and techniques they see fit, but the one thing I&#39;ve always demanded from our teams has been to design using machine-readable API contracts, such as <em>OpenAPI</em> or <em>GraphQL</em>.</p>
+<p>I would say this is internally the most important way we collaborate on our software&#39;s design, using shared types and automated tests to ensure our implementations follow the common API contracts. This approach has radically reduced bugs and allowed our engineers to work together efficiently leveraging platform features built and maintained by other teams.</p>
+<p>On top of that, being API First and publicly building and sharing our API contracts has allowed our customers and partners to effortlessly build on our product, and integrate it deeply with their own IT landscape using our API &amp; SDK.</p>
+<h2>Continuous production deploys from <code>main</code></h2>
+<p><strong>Bad bet 💸</strong></p>
+<p>Turns out our customers simply did not tolerate the frequent changes and inevitable rollbacks of this approach.</p>
+<p>We technically still ship continuously from <code>main</code> to our production environment, with an average of 150 production deployments every week, (with a lot of tests!), but now ship a monthly stable snapshot release to paying customers, and heavily utilise feature flags to roll out changes.</p>
+<h2>Not using feature flags from the beginning</h2>
+<p><strong>Bad bet 💸</strong></p>
+<p>We did use GitLab feature flags on launch, but they were only used to turn features on/off between stages (<code>dev</code>, <code>staging</code>, <code>production</code>).</p>
+<p>Turns out this wasn&#39;t enough. Our teams really needed better tools to give us fine-grained control over rolling out features to specific customers. </p>
+<p>Going back, I wish we had started earlier with something like <em>LaunchDarkly</em>.</p>
+<h2>Hiring product-focused senior engineers remotely</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>This is a decision I&#39;m very proud of. Keeping an almost unreasonably high bar to getting hired and seeking out individuals who care about the product, our customers and our business has allowed us to build and retain a motivated team with zero managers and architects. </p>
+<p>Making engineer hiring remote-first allowed us to tap into an international pool of senior talent resulting in a team of more than 30 exceptional and motivated hands-on <em>Product Engineers</em> from more than 10 countries working for us, and growing... ❤️</p>
+<h2>In-house DevOps / platform team</h2>
+<p><strong>Bad bet 💸</strong></p>
+<p>We tried to establish a platform team on two separate occasions but both times the team struggled to produce value for our teams. The DevOps engineer hired to lead the second platform team ended up leaving us for a bigger company after a few months.</p>
+<p>Looking back, part of the reason for this was likely a combination of leveraging managed/serverless services that don&#39;t require much in-house automation work, and hiring senior engineers who can automate things for themselves when needed.</p>
+<p>We&#39;ve recently started experimenting working with a 3rd party DevOps consultancy to join us on a project-basis to help us with non-product related engineering tasks such as optimising our CI/CD pipelines.</p>
+<p>Regardless, we don&#39;t anymore see any need to hire and establish an in-house DevOps team, or get into <em>Platform Engineering</em> of any sort in the foreseeable future.</p>
+<h2>Weekly Demos</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>The all-hands weekly demo is still easily my favourite recurring event at epilot. It&#39;s like having a company-wide celebration of shipping things, every week!</p>
+<p>The weekly demo brings not only a positive buzz around all the cool stuff being built, but also the expectation that engineers personally showcase concrete customer value created in their teams every week. It keeps us accountable for consistent delivery and maintains a rapid feedback loop with the rest of the company.</p>
+<h2>Open-Source Engineering Principles</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>Transparently laying out our Engineering Principles in a <a href="https://github.com/epilot-dev/engineering-principles">public GitHub repo</a> helped set clear expectations for our culture internally, and perhaps even more importantly for engineer candidates, many of whom have testified making the decision to apply at epilot because of our principles resonating with their own beliefs. </p>
+<h2>Hasura</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>One of the early key bets was the decision to use <em>Hasura</em> to interface with our legacy database to break up the monolith into microservices.</p>
+<p>Event triggers listening on DB changes and pushing messages to SQS while using the GraphQL API to implement 2-way data sync with the legacy app turned out to be a great and reliable event-driven pattern for breaking up the monolith step by step.</p>
+<p>Since shutting down the legacy product last year, <em>Hasura</em> was decommissioned together with the legacy Postgres database, but it truly served its purpose well during the migration to serverless. 🫡</p>
+<h2>DynamoDB as our go-to database</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>We haven’t had any fundamental issues with DynamoDB single table design in our backend microservices. </p>
+<p>Of course it’s not suitable for every use case, and we have turned to <em>Aurora serverless</em>, <em>Elasticsearch</em>, and even <em>InfluxDB</em> in a few special cases, such as for search and analytical needs. But for 80% of the time, DynamoDB is fast, convenient and extremely worry-free as a default application database. </p>
+<h2>AWS OpenSearch service</h2>
+<p><strong>Bad bet 💸</strong></p>
+<p>We started out on <em>Amazon OpenSearch Service</em> (still called <em>Elasticsearch service</em> back then) but were struck with a pretty bad incident where our domain became completely non-responsive in our development environment and the only thing we could do was to contact AWS support to resolve the issue. This was totally unacceptable for us as we heavily rely on Elasticsearch for our main functionalities.</p>
+<p><em>Elastic Cloud</em> ended up being far more reliable and manageable for us in the end. Having a self-service reboot button on the interface makes all the difference!</p>
+<p>However with both providers rolling out their serverless solutions, which would be extremely attractive to us, we&#39;re keeping our eyes open and are open to experimenting again with <em>AWS OpenSearch</em> offering.</p>
+<h2>Datadog for observability &amp; monitoring</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>Datadog is one of those tools that once you get used to it, you wonder how you ever lived without it.</p>
+<p>The value we get from Datadog&#39;s UI for logs, traces, monitors and dashboards is insane, and absolutely worth every penny.</p>
+<p>We use Datadog RUM for browser &amp; UX monitoring. The RUM sessions and logs are extremely helpful for tracking down frontend crashes and bugs, as well as visually understanding user behaviours.</p>
+<p>On top of that, we use pipeline observability to analyse CI pipelines, custom metrics to track business &amp; application KPIs, and cloud security management for compliance reporting and threat detection.</p>
+<h2>Datadog for incident management &amp; post-mortems</h2>
+<p><strong>Good bet 👍</strong></p>
+<p>Datadog Incident Management has been absolutely vital in making sure we take the right steps to analyse and learn from our incidents. We use it during incidents for coordination and communication, as well as after the fact for post-mortem and analysis of past incidents and trends.</p>
+<h2>Datadog for browser tests</h2>
+<p><strong>Bad bet 💸</strong></p>
+<p>Datadog synthetic browser tests were great to get started fast but quickly became slow, expensive, hard to expand and simply not good enough for our team. </p>
+<p>We ended up switching over to <em>Playwright</em>.</p>
+<h2>Redshift Serverless</h2>
+<p><strong>Bad bet 💸</strong></p>
+<p>Quite slow. Very expensive. At least for our use case of generating dashboards with Spectrum querying mostly parquet files from S3.</p>
+<p>Our team is currently investigating replacing Redshift with <em>Clickhouse</em>.</p>
+<h2>Microservices</h2>
+<p><strong>It&#39;s complicated 😎</strong></p>
+<p>At this point I&#39;ve stopped referring to our product as having a <em>microservices</em> architecture. I don&#39;t find it a very helpful abstraction to understand a large, event-driven, interconnected product that&#39;s mostly FaaS.</p>
+<p>Yes, we still develop and deploy our services as independent domain-specific modules with well-defined APIs.</p>
+<p>In reality however our application is used by the customer as one big product with all the pieces needing to connect and work together to provide a service.</p>
+<p>Thus, we must also test and ship the product as one. (Really, we have one large shared e2e test project that blocks all pipelines. When we&#39;re shipping our monthly stable release, we take a snapshot of all our bundles and ship those in one atomic import map file.)</p>
+<p>I simply find it more useful to think of our product as one monolith, made up of a large number of independent infrastructure &amp; FaaS modules with APIs.</p>
+<h2>Conclusion: Was the rewrite a good idea?</h2>
+<p>If you ask me now I would never recommend any SaaS company take the decision to fully rewrite their software. It&#39;s generally just a pretty dumb and painful thing to do. 😅</p>
+<p>For epilot sadly we were left with no other choice.</p>
+<p>The legacy version of our SaaS was built on top of a proprietary 3rd-party low-code platform <em>Axon Ivy</em>, which by no means was designed to run a multi-tenant SaaS, but that the external epilot dev team from Vietnam (affiliated with Axon) had managed to wrangle to work.</p>
+<p>The fact that epilot was able to build a successful and fast-growing business on top of what&#39;s essentially a hacked low-code business process automation tool, is the ultimate proof to me that the tech stack really doesn&#39;t determine a company&#39;s success!</p>
+<p>But we were seriously starting to hit the limits of our software, especially when it came to scalability and speed of development. We didn&#39;t even have access to the source code so that we could take over the development of the core application. All we could do was upgrade to new versions provided by the vendor and continue to hack the software to make it do more things it wasn&#39;t designed for.</p>
+<p>Simply put, it wasn&#39;t sustainable for a fast growing software company. No developer wants to work on software like this. Especially not the talented and ambitious ones we wanted to work with.</p>
+<p>It took us nearly 3 years, but in the end we managed to reach feature parity, replace, migrate and shut down the legacy app, with very little churn, growing year-over-year and last year <strong>doubling our MRR</strong> while migrating the last customers over to the new platform.</p>
+<p>Feels good to say we&#39;re only getting started with our new 360 platform.</p>
+<p>Looking back at the last 3 years, while I would never recommend anyone pursue a rewrite for a running SaaS business, while simultaneously trying to build a healthy, ambitious engineering team and culture, I&#39;m convinced that for epilot this was the (only) way to go, and we&#39;re much better for it.</p>
+<p>In the end we at epilot overwhelmingly consider this a…</p>
+<p><strong>Good bet 👍</strong></p>
+<h2>What&#39;s next?</h2>
+<p>To keep things short in this post, I&#39;ll publish a separate Part 2 where I share our latest bets focused on building epilot into the next SaaS Unicorn. 🦄</p>
+<p><em>Mandatory recruitment disclaimer</em>: If this post made you at all curious, please check out our <a href="https://docs.epilot.io/docs/intro">docs</a> and check our <a href="https://epilot.cloud/en/career-jobs/#:~:text=Discover%20now-,We%20are%20looking%20for%20you!,-HR">open positions</a> for more!</p>
+
+    </article>
+
+    <hr class="feed-hero__divider" />
+    <p class="feed-hero__subscribe-label">
+      Subscribe to get future posts via email (or grab the <a href="/feed/rss.xml">RSS feed</a>)
+    </p>
+    
+    <section class="subscribe subscribe--compact" id="subscribe">
+      
+      <form action="https://buttondown.com/api/emails/embed-subscribe/viljami"
+        method="post" class="subscribe__form">
+        <input type="email" name="email" placeholder="Type your email&hellip;" required aria-label="Email address" />
+        <button type="submit" class="btn btn-primary">Subscribe</button>
+      </form>
+    </section>
+  </main>
+
+  <footer class="impressum">
+    <p><a href="/feed/">&larr; All posts</a></p>
+  </footer>
+
+</body>
+
+</html>

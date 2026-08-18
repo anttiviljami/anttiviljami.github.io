@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>How I Got Product Engineering Wrong — Viljami Kuosmanen</title>
+  <meta name="description" content="If you've seen my posts lately you've probably seen a lot of talk about Product Engineers: software..." />
+  <meta name="theme-color" content="#0e0f12" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#fafaf7" media="(prefers-color-scheme: light)" />
+  <meta property="og:title" content="How I Got Product Engineering Wrong — Viljami Kuosmanen" />
+  <meta property="og:description" content="If you've seen my posts lately you've probably seen a lot of talk about Product Engineers: software..." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://viljami.io/feed/the-sauna-epiphany-how-i-got-product-engineering-wrong/" />
+  <link rel="canonical" href="https://viljami.io/feed/the-sauna-epiphany-how-i-got-product-engineering-wrong/" />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="alternate icon" href="/assets/favicon.png" type="image/png" />
+  <link rel="alternate" type="application/rss+xml" title="Viljami Kuosmanen &mdash; Feed" href="https://viljami.io/feed/rss.xml" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+
+  <main class="card feed-card post">
+    <header class="hero">
+      <p class="eyebrow"><a href="/feed/">&larr; Viljami.io / Feed</a></p>
+      <h1>How I Got Product Engineering Wrong</h1>
+      <p class="title">October 13, 2024</p>
+    </header>
+
+    <article class="post__body">
+<p>If you&#39;ve seen my posts lately you&#39;ve probably seen a lot of talk about <em>Product Engineers</em>: software engineers who talk in customer problems and take pride in the products they build, not only the code and technologies they use.</p>
+<p>My core thesis is that with the rise of AI, the expectations for software engineers are being redefined, moving away from narrow programming roles: backend, frontend, C#, Java, React, etc. fast becoming obsolete due to AI tools like <a href="https://www.cursor.com/">Cursor</a> lowering the barrier of entry and unlocking productivity with any technology.</p>
+<p>The days when you could coast on your ability to churn out code are over. If you&#39;re still clinging to the idea that you&#39;re safe just because you know how to write code in a widely used language or framework you&#39;re in for a rude awakening.</p>
+<p>I believe this trend is likely to be the biggest industry shift in my lifetime, even surpassing the agile movement of the last 20 years. And I&#39;m not the only one talking about it. (<a href="https://blog.pragmaticengineer.com/the-product-minded-engineer/">#1</a>, <a href="https://hybridhacker.email/p/how-to-become-a-product-engineer">#2</a>, <a href="https://thesoftwareengineeringtimes.substack.com/p/are-product-engineers-replacing-software">#3</a>, <a href="https://saranga.dev/from-code-monkey-to-product-engineer-the-evolution-of-software-engineering-in-the-age-of-llms-3c79a508464d">#4</a>, <a href="https://thesoftwareengineeringtimes.substack.com/p/are-product-engineers-replacing-software">#5</a>)</p>
+<p>But I got it wrong.</p>
+<p>Not entirely wrong, but I made it more complicated than it needed to be. In my quest to define what it means to be a product engineer, I overlooked the power of simplicity and ironically did not think enough about the customer: the ambitious software engineer thinking strategically about their careers.</p>
+<h2>I overengineered it</h2>
+<p>In my earlier attempts to help engineers break out from purely technical roles, I published an extensive checklist to help engineers think and ask questions as product engineers. It covered everything from understanding the user and the market to measuring success and staying ahead of industry trends.</p>
+<p>Here&#39;s a taste of that checklist:</p>
+<ul>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#1-understand">1 Understand</a><ul>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#11-whos-the-user">1.1 Who&#39;s the user?</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#12-whos-the-customer">1.2 Who&#39;s the customer?</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#13-whats-the-market">1.3 What&#39;s the market?</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#14-ask-why">1.4 Ask Why</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#15-what-do-we-already-know">1.5 What do we already know?</a></li>
+</ul>
+</li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#2-craft">2 Craft</a><ul>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#21-am-i-proud-of-what-im-building">2.1 Am I proud of what I&#39;m building?</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#22-does-the-product-feel-good">2.2 Does the product feel good?</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#23-how-do-i-get-there-faster">2.3 How do I get there faster?</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#24-teamwork">2.4 Teamwork</a></li>
+</ul>
+</li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#3-growth">3 Growth</a><ul>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#31-how-do-i-measure-the-success-of-my-work">3.1 How do I measure the success of my work?</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#32-how-do-i-maximise-the-impact-of-my-work">3.2 How do I maximise the impact of my work?</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#33-how-do-i-stay-ahead-of-the-curve">3.3 How do I stay ahead of the curve?</a></li>
+</ul>
+</li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#4-product-vision">4 Product Vision</a><ul>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#41-whats-our-north-star">4.1 What’s our North Star?</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#42-how-does-my-work-impact-the-overall-design-of-the-product">4.2 How does my work impact the overall design of the product?</a></li>
+<li><a href="https://dev.to/epilot/the-product-engineer-checklist-469d#43-whats-the-ambition-level">4.3 What&#39;s the ambition level?</a></li>
+</ul>
+</li>
+</ul>
+<p>Great stuff, but let&#39;s be honest — no engineer is going to run through a 15-point checklist to make a product decision. Just seeing this long list of questions can be totally overwhelming, especially if you&#39;re used to being in a technical role.</p>
+<p>If we expect engineers to actually start doing this stuff, the core idea needs to be simple and easy to remember.</p>
+<h2>The Wake-Up Call in the Sauna</h2>
+<p>As I&#39;m writing this post, I&#39;m enjoying a company working vacation in a nice hotel in Mallorca with my epilot colleagues. I was having a conversation in the hotel sauna with a principal engineer where something he said in passing suddenly clicked for me.</p>
+<p>He was venting about some engineers on his team who seemed to be diving head first into coding without bothering to understand the problem. <em>&quot;It&#39;s so easy. Every engineer should be able to answer what problem they&#39;re solving, who the customer is, and what the impact of the work they&#39;re doing is.&quot;</em></p>
+<p>That hit me like a splash of cold water in a 100°C Finnish sauna.</p>
+<p>He was totally right.</p>
+<h2>Boiling It Down to 3 Essential Questions</h2>
+<p>To think like a product engineer, it&#39;s already enough to start with just three simple questions:</p>
+<ul>
+<li><strong>What&#39;s the problem?</strong></li>
+<li><strong>For who?</strong></li>
+<li><strong>Why is this important?</strong></li>
+</ul>
+<p>Let&#39;s dive a bit deeper into each one.</p>
+<h3>1. What&#39;s the problem?</h3>
+<p>Stop coding for a second. Do you really know what you&#39;re trying to solve? Not the ticket description in Jira, but the real-world issue. If you can&#39;t articulate the problem in simple plain English, you have no business writing a single line of code.</p>
+<h3>2. For who?</h3>
+<p>Identify your user and customer. Sometimes they&#39;re the same person; other times, they&#39;re not. Understanding who will use your product (and who will pay for it) is crucial. It shapes the way you approach the solution and helps you tailor the experience to meet their needs.</p>
+<h3>3. Why is this important?</h3>
+<p>As engineers there&#39;s never a shortage of things we could improve or implement. If solving the problem doesn&#39;t make a meaningful difference, why are you wasting your valuable time? We&#39;re not here to build features that nobody uses or cares about. Connect your work to something that actually matters and helps build your track record.</p>
+<p>By anchoring your work in these three questions, you immediately move from code monkey to a high value product-minded engineer. Still a rare breed. You&#39;re not just implementing features someone else decided to build; you&#39;re elevating yourself to a position to influence product decisions and build smarter.</p>
+<h2>Leverage Your Team—They&#39;re There for a Reason</h2>
+<p>The biggest mistake engineers make is thinking they have to find all the answers themselves.</p>
+<p>Most of us are lucky to work in a product team with other disciplines like UX researchers, designers, PMs and business stakeholders whose job is to help answer these questions.</p>
+<p>By leaning on your team, you not only find better answers but also foster a more collaborative and innovative environment.</p>
+<p>Product engineering is a team sport.</p>
+<h2>Taking Action: Start Asking the Right Questions Today</h2>
+<p>So, the next time you tackle a new topic, pause for a moment before diving into code. Ask yourself:</p>
+<ul>
+<li><strong>What&#39;s the problem?</strong></li>
+<li><strong>For who?</strong></li>
+<li><strong>Why is this important?</strong></li>
+</ul>
+<p>Write down your answers. If you don&#39;t know, reach out to your team and find out. This simple practice can transform your approach to work, leading to better decisions, more impactful solutions, and a greater sense of ownership.</p>
+<p>Congratulations, you just became a Product Engineer! </p>
+<h2>Join the Conversation</h2>
+<p>I&#39;d love to hear your thoughts on this simplified approach to product engineering. Have you tried asking these three questions in your work? What impact did it have? Share your experiences in the comments below.</p>
+<p>Consider giving the <a href="https://github.com/anttiviljami/product-engineer-manifesto">GitHub repository</a> a star if the product engineer role resonates with you!</p>
+
+    </article>
+
+    <hr class="feed-hero__divider" />
+    <p class="feed-hero__subscribe-label">
+      Subscribe to get future posts via email (or grab the <a href="/feed/rss.xml">RSS feed</a>)
+    </p>
+    
+    <section class="subscribe subscribe--compact" id="subscribe">
+      
+      <form action="https://buttondown.com/api/emails/embed-subscribe/viljami"
+        method="post" class="subscribe__form">
+        <input type="email" name="email" placeholder="Type your email&hellip;" required aria-label="Email address" />
+        <button type="submit" class="btn btn-primary">Subscribe</button>
+      </form>
+    </section>
+  </main>
+
+  <footer class="impressum">
+    <p><a href="/feed/">&larr; All posts</a></p>
+  </footer>
+
+</body>
+
+</html>

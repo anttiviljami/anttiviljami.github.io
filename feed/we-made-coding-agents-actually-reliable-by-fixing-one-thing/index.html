@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>We Made Coding Agents Actually Reliable By Fixing One Thing — Viljami Kuosmanen</title>
+  <meta name="description" content="Last week, Vercel published research showing that giving coding agents a compact index of your..." />
+  <meta name="theme-color" content="#0e0f12" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#fafaf7" media="(prefers-color-scheme: light)" />
+  <meta property="og:title" content="We Made Coding Agents Actually Reliable By Fixing One Thing — Viljami Kuosmanen" />
+  <meta property="og:description" content="Last week, Vercel published research showing that giving coding agents a compact index of your..." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://viljami.io/feed/we-made-coding-agents-actually-reliable-by-fixing-one-thing/" />
+  <link rel="canonical" href="https://viljami.io/feed/we-made-coding-agents-actually-reliable-by-fixing-one-thing/" />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="alternate icon" href="/assets/favicon.png" type="image/png" />
+  <link rel="alternate" type="application/rss+xml" title="Viljami Kuosmanen &mdash; Feed" href="https://viljami.io/feed/rss.xml" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+
+  <main class="card feed-card post">
+    <header class="hero">
+      <p class="eyebrow"><a href="/feed/">&larr; Viljami.io / Feed</a></p>
+      <h1>We Made Coding Agents Actually Reliable By Fixing One Thing</h1>
+      <p class="title">February 4, 2026</p>
+    </header>
+
+    <article class="post__body">
+<p>Last week, Vercel published <a href="https://vercel.com/blog/agents-md-outperforms-skills-in-our-agent-evals">research showing that giving coding agents a compact index of your documentation dramatically outperforms letting them search for answers on demand</a>. Their eval results: 100% task success rate with the map approach, versus only 79% when agents had to actively look things up.</p>
+<p>Same agent, same tasks, different approach to context. The difference between working and not working.</p>
+<p>The insight clicked immediately. If we could give Claude Code reliable access to this institutional knowledge without forcing it to decide when to look things up, it would fundamentally change how people work in our codebase.</p>
+<p>So we built it.</p>
+<h2>The Context Problem</h2>
+<p>Coding agents have a token limit. A ceiling on how much information they can process at once. Think of it like working memory. You can&#39;t hand Claude Code your entire codebase and documentation library upfront. It&#39;s too much.</p>
+<p>The traditional solution is skills: the coding agent decides when it needs information and actively looks it up. &quot;I need to know about authentication, let me search for that.&quot; Sounds reasonable. In practice it creates three problems:</p>
+<ol>
+<li><strong>Decision paralysis</strong> - the agent has to decide <em>when</em> to look up docs, and it often guesses wrong</li>
+<li><strong>Async delay</strong> - every lookup is a round-trip, breaks flow</li>
+<li><strong>Sequencing conflicts</strong> - exploring code vs. consulting docs creates timing issues</li>
+</ol>
+<p>Vercel&#39;s approach flips this: give Claude Code a compressed index of what documentation exists and where to find it, <em>before</em> it starts work. The index is small enough to fit in context every turn, so it always knows what&#39;s available. When it needs details, it reads the specific file directly. No decisions, no lookups, no conflicts.</p>
+<h2>Why Compression Matters</h2>
+<p>The key innovation is compression. A full documentation tree - all the folder structures, file names, categories - takes significant space. Too much to include in every conversation turn.</p>
+<p>The compressed index uses a simple pipe-delimited format that shrinks this by ~80%:</p>
+<pre><code class="hljs">[epilot Docs Index]|root: ./.epilot-docs|00-general:{tech-stack.md,business-context.md,ci-cd.md}|01-apis:{api-design.md,calling-apis.md}|02-epilot360-microfrontends:{env-vars.md,local-dev.md}|...
+</code></pre><p>That single line tells the agent:</p>
+<ul>
+<li>Where the docs live (<code>.epilot-docs/</code>)</li>
+<li>What categories exist (<code>00-general</code>, <code>01-apis</code>, etc.)</li>
+<li>What files are in each category</li>
+</ul>
+<p>It&#39;s a table of contents, not the full book. But it&#39;s enough. The agent sees the map, understands what&#39;s available, and pulls specific files when needed. The decision-making load disappears.</p>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/2smftr4lr0o3jpr0xtxp.png" alt="Claude code actually reading docs for once before jumping into code"></p>
+<h2>Why This Matters</h2>
+<p>The accuracy improvement is significant (100% vs 79% task success), but it&#39;s not the real story.</p>
+<p>The real story is what happens when you lower the barrier to contribution. Proper context enables the person closest to the problem to fix it, regardless of job title. Your PM can fix bugs. Designers can adjust component behavior. Support engineers can patch data issues. You remove bottlenecks. Context and authority live in the same person.</p>
+<p>Coding agents are the equalizer. But they&#39;re only as good as the context you give them.</p>
+<p>Most companies will throw Claude Code at their codebase and wonder why results are inconsistent. The agent hallucinates patterns. Makes incorrect assumptions. Writes code that doesn&#39;t match conventions.</p>
+<p>The difference is context. Structured, compressed, always-available context about how <em>your</em> codebase works.</p>
+<h2>How to Build Your Own</h2>
+<p>The pattern is straightforward. Here&#39;s what we did at epilot:</p>
+<ol>
+<li><strong>Curate agent-friendly documentation</strong> - organize your internal knowledge: conventions, APIs, architectural patterns, framework usage, code style</li>
+<li><strong>Structure by domain</strong> - group related docs (general, backend, frontend, infrastructure, etc.)</li>
+<li><strong>Use descriptive filenames</strong> - the agent sees filenames in the compressed index before opening files. <code>api-design.md</code> is better than <code>guidelines.md</code>. <code>error-handling.md</code> is better than <code>errors.md</code>. Make filenames searchable and specific.</li>
+<li><strong>Automate updates</strong> - pull live data where possible (OpenAPI specs, schema definitions, framework docs)</li>
+<li><strong>Generate compressed index</strong> - use a simple format (pipe-delimited works well) that reduces the doc tree by ~80%</li>
+<li><strong>Embed in agent context</strong> - add the index to your CLAUDE.md or AGENTS.md file (the context files Claude Code reads)</li>
+</ol>
+<p>One thing worth highlighting: we don&#39;t just include our internal documentation. We also package docs for the frameworks and libraries we heavily use - single-spa, openapi-backend, openapi-client-axios, i18next, and Volt UI (our custom design system). When Claude Code needs to know how i18next pluralization works or how to register a single-spa parcel, it already has the answer. No hallucination, no outdated Stack Overflow posts, just accurate framework documentation.</p>
+<h2>What This Enables</h2>
+<p>We&#39;re already seeing daily usage across the team. Developers context-switch between services faster. Non-engineers contribute directly instead of filing tickets.</p>
+<p>But the real potential is broader: if compressed context improves coding agents for technical documentation, why stop there?</p>
+<ul>
+<li><strong>Runbooks and incident response</strong> - on-call engineers with instant access to procedures</li>
+<li><strong>Customer domain knowledge</strong> - support teams with context on product behavior</li>
+<li><strong>Business logic</strong> - product decisions and their rationale, preserved and accessible</li>
+</ul>
+<p>The pattern is the same: curate the knowledge, compress it, embed it in context, let the agent work.</p>
+<h2>The Constraints Are Disappearing</h2>
+<p>For decades, contributing to a codebase required deep technical knowledge. You needed to understand the language, the frameworks, the architectural patterns, the implicit conventions. The barrier was high.</p>
+<p>Coding agents lower it. Claude Code, Cursor, and similar tools don&#39;t replace engineers. They make technical knowledge more accessible. With the right tooling and the right context, a PM can fix bugs. A designer can adjust styling logic. A support engineer can patch data issues.</p>
+<p>The question isn&#39;t whether this is possible. It&#39;s how fast you can adapt.</p>
+<p>Organizations which enable broader contribution will move faster than those that don&#39;t. The tools exist. The research is clear. What&#39;s missing is execution.</p>
+<h2>Start Simple</h2>
+<p>You don&#39;t need to document everything upfront. Start with the knowledge that causes the most friction:</p>
+<ul>
+<li><strong>Code style conventions</strong> - how you write TypeScript, naming patterns, file structure</li>
+<li><strong>Common patterns</strong> - how you handle authentication, API calls, error handling</li>
+<li><strong>Framework specifics</strong> - non-obvious usage of your frameworks and libraries</li>
+<li><strong>Internal APIs</strong> - if you have OpenAPI specs, even better</li>
+</ul>
+<p>Create a simple doc structure:</p>
+<pre><code class="hljs">docs/
+  00-general/
+    code-style.md
+    tech-stack.md
+  01-apis/
+    api-design.md
+    calling-apis.md
+  02-backend/
+    error-handling.md
+    database-patterns.md
+</code></pre><p>Generate the compressed index (pipe-delimited format, one line per directory). Add it to your CLAUDE.md or AGENTS.md file - the context files that Claude Code and other coding agents read on startup. Done.</p>
+<p>The compressed index approach works! 🎉 Vercel&#39;s research proved it: 100% task success versus 79% without it. We&#39;ve validated it internally. Now it&#39;s about whether you&#39;ll adopt it before your competitors do.</p>
+
+    </article>
+
+    <hr class="feed-hero__divider" />
+    <p class="feed-hero__subscribe-label">
+      Subscribe to get future posts via email (or grab the <a href="/feed/rss.xml">RSS feed</a>)
+    </p>
+    
+    <section class="subscribe subscribe--compact" id="subscribe">
+      
+      <form action="https://buttondown.com/api/emails/embed-subscribe/viljami"
+        method="post" class="subscribe__form">
+        <input type="email" name="email" placeholder="Type your email&hellip;" required aria-label="Email address" />
+        <button type="submit" class="btn btn-primary">Subscribe</button>
+      </form>
+    </section>
+  </main>
+
+  <footer class="impressum">
+    <p><a href="/feed/">&larr; All posts</a></p>
+  </footer>
+
+</body>
+
+</html>

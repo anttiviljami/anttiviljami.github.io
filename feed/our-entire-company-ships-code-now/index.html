@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Our Entire Company Ships Code Now. 40 PRs from Non-Engineers in 60 Days. — Viljami Kuosmanen</title>
+  <meta name="description" content="In February, I opened our entire codebase to the company. PMs, designers, projects, customer success,..." />
+  <meta name="theme-color" content="#0e0f12" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#fafaf7" media="(prefers-color-scheme: light)" />
+  <meta property="og:title" content="Our Entire Company Ships Code Now. 40 PRs from Non-Engineers in 60 Days. — Viljami Kuosmanen" />
+  <meta property="og:description" content="In February, I opened our entire codebase to the company. PMs, designers, projects, customer success,..." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://viljami.io/feed/our-entire-company-ships-code-now/" />
+  <link rel="canonical" href="https://viljami.io/feed/our-entire-company-ships-code-now/" />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="alternate icon" href="/assets/favicon.png" type="image/png" />
+  <link rel="alternate" type="application/rss+xml" title="Viljami Kuosmanen &mdash; Feed" href="https://viljami.io/feed/rss.xml" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+
+  <main class="card feed-card post">
+    <header class="hero">
+      <p class="eyebrow"><a href="/feed/">&larr; Viljami.io / Feed</a></p>
+      <h1>Our Entire Company Ships Code Now. 40 PRs from Non-Engineers in 60 Days.</h1>
+      <p class="title">April 13, 2026</p>
+    </header>
+
+    <article class="post__body">
+<p>In February, I opened our entire codebase to the company. PMs, designers, projects, customer success, and support all got access to 219 repositories and over a million lines of production code. I handed them powerful coding agents and told them to start contributing.</p>
+<p>I&#39;ve been writing about product engineering for years. The core idea: engineers should understand the whole product, the customer, the business problem. I wanted to test the reverse. Can non-engineers contribute to the codebase if you give them the right tools?</p>
+<p>Two months of real data delivered a clear answer: yes. And it may be the most powerful shortcut I&#39;ve found to building capable, business-aware product teams who truly care about what they ship.</p>
+<p>Here is what that looked like at epilot: 629 merged PRs in 60 days. <strong>40 PRs were from 11 non-engineers</strong>. All teams have at least one person who contributed to our codebase with Claude Code.</p>
+<p>We&#39;re not alone in seeing this shift. <a href="https://stripe.dev/blog/minions-stripes-one-shot-end-to-end-coding-agents">Stripe ships over a thousand agent-produced PRs per week</a>. <a href="https://openai.com/index/introducing-codex/">Superhuman uses Codex</a> to let product managers contribute lightweight code changes without pulling in an engineer (except for code review). <a href="https://ideas.fin.ai/p/we-gave-claude-code-to-everyone-at">Intercom gave Claude Code to everyone in the company</a>, over 1,000 non-engineers (PMs, designers, support, marketers, and more), and more than 300 became active weekly users.</p>
+<p>This post is a detailed, honest look at how we set it up, what actually worked, the mistakes we made, and the deeper lessons that emerged.</p>
+<hr>
+<h2>The starting point</h2>
+<p>epilot is a B2B SaaS platform for energy companies. We run a fully remote team of 40+ product engineers with no engineering managers and no dedicated platform team. Everyone owns end-to-end ownership. We already ship to production 150+ times per week on AWS serverless.</p>
+<p>Our entire engineering team was already using AI coding agents daily. Claude Code, Codex, Cursor. Engineers had adopted them fast and the productivity gains were obvious. The question I wanted to answer next: what happens when you expand codebase access via coding agents to the rest of the company? PMs, designers, customer success, support. Not as a one-off hack day, but as a fully supported, production-grade workflow.</p>
+<h2>The infrastructure that turned agents into teammates</h2>
+<p>Claude Code and Codex still only ship connectors to GitHub, and our entire codebase lives in GitLab. So we created a single GitHub repo that bootstraps a developer sandbox with a shallow copy of all 219 repositories. This allows both AI agents or engineers to spin up a fully functioning developer environment with everything cloned &amp; tools set up within minutes.</p>
+<h3>1. Agents live in Slack</h3>
+<p>We created <strong>#dev-squad-agents</strong> alongside our regular squad channels. Anyone could join via Claude Code, Codex, or GitHub Codespaces. I ran three one-hour onboarding sessions to showcase the tooling and make sure everyone had the required access: one for design, one for support, one for go-to-market. The PMs didn&#39;t need their own session. Their engineering teams had already invited them and they were eager to start.</p>
+<p>This single decision drove adoption more than anything else.</p>
+<h3>2. One-click preview environments</h3>
+<p>Every PR automatically generates a live preview link in CI. Click it, see the change, test it immediately. No local setup required.</p>
+<p>For engineers this is convenient. For non-engineers it is essential. If they cannot see and interact with their change, they can&#39;t meaningfully contribute.</p>
+<h3>3. Deep institutional context</h3>
+<p>We built an indexed knowledge base called <strong><a href="https://www.linkedin.com/pulse/we-made-coding-agents-actually-reliable-fixing-one-thing-kuosmanen-oa2of/">how-to-everything</a></strong>. It contains our API patterns, backend conventions, code style, CI/CD and testing strategy, full business context, domain terminology, and our entire RFC archive.</p>
+<p>Stripe solved the same problem by connecting agents to 400+ internal tools. We chose comprehensive indexing. The insight is identical: <strong>agents without your company’s context produce garbage. Agents with it produce work that feels native.</strong></p>
+<h3>4. Design system in context</h3>
+<p>Our Volt UI component library is baked into the agent prompt. Claude now generates frontend code that respects the correct components, spacing, colours, and patterns from the first try. Consistent UI without forcing a designer to review every small change.</p>
+<hr>
+<h2>Claude as a coworker: the Slack pattern</h2>
+<p>Claude quickly became the most active “team member.” People tag <strong>@Claude</strong> the same way they tag colleagues, and they expect results just as fast.</p>
+<h3>How engineers use it</h3>
+<p>Simple tasks look like: “@Claude fix EPI-5660.” A PR appears.</p>
+<p>More powerful uses scale across the organization:</p>
+<ul>
+<li><em>“@Claude which microfrontends still use the legacy editor?”</em> → instant audit of all 219 repos.</li>
+<li><em>“@Claude migrate 13 backend repos from file-client to lambda-adapter.”</em> → completed in one session.</li>
+<li>Mass upgrades across 20+ repositories: one message triggers 6 parallel sub-agents that handle changes, tests, and PRs.</li>
+</ul>
+<p>What once took a full day of tedious cross-repo work now happens in hours. Agents worked weekends. Engineers didn&#39;t have to.</p>
+<h3>How non-engineers use it</h3>
+<p>They speak in plain product language:
+<em>- “@Claude disable drag and drop of entity table columns for embedded tables.”</em></p>
+<ul>
+<li><em>“@Claude when creating a new family in the Label Builder, the drawer should close automatically.”</em></li>
+</ul>
+<p>Claude figures out the right repositories and implementation details. Non-engineers don&#39;t need to know our tech stack or repo structure. They describe the desired outcome.</p>
+<h3>Production impact</h3>
+<p>We added Claude to <strong>#alerts-production</strong> on day two. It investigates incidents, reads logs, traces errors, and proposes fixes before most engineers open the dashboard. When a bulk action hammered Elasticsearch with 100 parallel requests, Claude designed an org-level job queue with concurrency limits that cut peak load by 90%. Engineers started replying “another one bites the dust” to resolved alerts.</p>
+<p>Within a week, Claude felt like a trusted junior-to-senior coworker: fast executor, deep historian, and reliable pair programmer. Usage spread organically to every squad.</p>
+<hr>
+<h2>What people actually built</h2>
+<h3>Non-engineer contributions (40 merged PRs from 11 people)</h3>
+<ul>
+<li><strong>Feature work</strong>: One PM built auto-tagging for file uploads (a feature he had spec’d three months earlier). Another shipped 13 PRs on messaging (bulk email templates, sidebar toggles, drawer behaviour, i18n). A go-to-market colleague delivered entire features, like pivot tables for displaying time-series data in epilot tables, that are now live for customers.</li>
+<li><strong>Daily improvements</strong>: Customer success shipped portal config changes they handle every day. Designers and support added FullStory tracking and started prototyping new UI flows.</li>
+<li><strong>Translations</strong>: Native speakers cleared 116 German translation improvements with almost no engineering involvement.</li>
+<li><strong>UX via vibecoding</strong>: A designer shipped a UX improvement to our Flow Hub before heading into the weekend: when creating a new Flow, users now get prompted to enter a name first. She described it as &quot;vibe coding&quot; and the change reduced friction in a way she&#39;d been wanting to fix for a while.</li>
+</ul>
+<p>These were not toy changes. Several were meaningful, customer-facing updates. One PM even asked Claude to create a demo video of the feature it just built, so he could share it with the team. The full cycle from spec to demo, handled through conversation with an agent.</p>
+<h3>Engineer contributions (589 merged PRs)</h3>
+<p>Engineers use agents across the full lifecycle. Writing RFCs and technical designs. Implementing multi-service features. Running tests. Shipping to production. Auditing feature flag usage across 15 repos and cleaning up stale flags. Investigating production incidents from alert channels before anyone opens a dashboard.</p>
+<p>Some of the most valuable uses are research and diagnostics. &quot;Which services listen to the file upload event?&quot; &quot;How many microfrontends still use the legacy editor?&quot; &quot;Audit all listSchemas calls and upgrade to the new summary API where safe.&quot; These are questions that used to take half a day of grepping across 219 repos. Claude answers them in minutes.</p>
+<p>GitHub Codespaces turned out to be a key piece for engineers too. Running Claude Code in auto-mode in a cloud sandbox means you can kick off a multi-repo migration and let it run without risking your work laptop. No local state to corrupt, no accidental changes to your working branch. The sandbox spins up with the full codebase mirrored and Claude works through the task autonomously. Engineers now run 6 parallel sub-agents in Codespaces for bulk upgrades across 20+ repos: package bumps, migration scripts, test updates, PRs opened. What used to be a full day of copy-paste across repos is done in one session.</p>
+<h3>The new collaboration model</h3>
+<p>Non-engineer describes the problem in business terms → Claude implements → engineer reviews for architecture and quality. The person closest to the customer now helps ship the solution. Feedback loops tightened dramatically.</p>
+<p>A designer and engineer even deployed <a href="https://www.agentation.com/">Agentation</a> (a prompt-structuring tool) in 2.5 hours. The designer now uses it daily and calls it a “dream collaboration.”</p>
+<hr>
+<h2>Guardrails: the hard lesson</h2>
+<p>A few weeks in, one non-engineer with full GitLab push access bypassed our CI pipeline and deployed code to production without review. No damage, but it was exactly the wake-up call we needed.</p>
+<p>We immediately tightened permissions: non-engineers and agents create PRs; engineers review and merge. No direct push to protected branches.</p>
+<p>But that incident was just one piece. When you give AI agents to 50+ non-engineers, you need a proper governance framework. We built one.</p>
+<h3>What we had from day one</h3>
+<ul>
+<li><strong>Sandboxed execution only.</strong> Agents run in Claude Code Web, Codex sandbox, or GitHub Codespaces. No production infrastructure access. No deployment outside CI.</li>
+<li><strong>Dedicated bot users.</strong> Limited API scopes. Code-level access only. Zero access to customer data, session tokens, or production databases.</li>
+<li><strong>Public channels only.</strong> All agent interactions happen in shared Slack channels. Engineers see everything and can intervene. No private DMs with agents.</li>
+<li><strong>Human responsibility.</strong> You trigger the agent, you own the output. No exceptions.</li>
+</ul>
+<h3>What we added after</h3>
+<p>We published a formal <strong>Agentic AI Tool Usage Guideline</strong>. The core principle: give the agent the minimum access it needs for the task at hand, and nothing more.</p>
+<p>The guideline includes:</p>
+<ul>
+<li><strong>A three-tier data classification.</strong> Red (never share with AI): customer PII, session tokens, credentials, security documents. Yellow (anonymise first): user research transcripts, survey responses, usage metrics with identifiers. Green (safe): public docs, your own drafts, anonymised research, process docs. Hard line on red: no exceptions, no &quot;just this once.&quot;</li>
+<li><strong>An approved connector matrix.</strong> Every tool combination (Claude + Figma, Claude + Atlassian, Claude + Miro, etc.) classified by risk level with specific conditions and recommended settings.</li>
+<li><strong>Prompt injection awareness.</strong> Use a separate browser profile for Claude browser extension. Don&#39;t paste content from untrusted sources into agent prompts. Disconnect MCP connectors when not in use.</li>
+<li><strong>Explicit dealbreakers.</strong> Leaking customer personal data, unauthorized code deployment, and feeding company data into model training are not allowed regardless of how useful the outcome might be.</li>
+<li><strong>GDPR and EU AI Act compliance.</strong> The guideline maps our practical rules to specific legal obligations: data minimisation (Art. 5), DPA requirements (Art. 28), AI literacy obligations (Art. 4), transparency requirements (Art. 50). We&#39;re a European company serving energy utilities. Regulatory compliance is table stakes.</li>
+</ul>
+<p><strong>Lesson</strong>: Lock down merge and push permissions <em>before</em> opening access. We got lucky. And build the governance framework early. Guardrails didn&#39;t slow adoption; they accelerated trust and usage.</p>
+<hr>
+<h2>What surprised us most</h2>
+<ul>
+<li><strong>Adoption speed</strong>: Three one-hour onboarding sessions and people were off. Every team across the company had active contributors within three weeks.</li>
+<li><strong>Non-engineers shipping real features</strong>: I expected small fixes and translations. Instead, people from across the company delivered complete, production features.</li>
+<li><strong>Claude as institutional memory</strong>: Support now asks Claude product questions instead of hunting down engineers. It has become the fastest way to understand how anything works across five years of code history.</li>
+</ul>
+<hr>
+<h2>Beyond code</h2>
+<p>This is just one layer. My colleague Suresh built <strong>Vigilos</strong>, an internal BI agent that lets anyone query our data warehouse in natural language. Designers check average journey name lengths for UX decisions. Customer success identifies accounts with AI features disabled. Product managers run customer segment analysis in minutes.</p>
+<p>We&#39;ll share that story soon.</p>
+<hr>
+<h2>Where this goes</h2>
+<p>Two years ago I published the Product Engineer Manifesto: engineers should care about the customer, the business outcome, and the whole product.</p>
+<p>What these two months taught me is that the same mindset now applies in reverse. Give non-engineers the right tools, deep context, and sensible guardrails, and they will deliver.</p>
+<p>We&#39;re still hiring product-minded engineers. That hasn&#39;t changed. Engineers at epilot own the full product lifecycle: customer understanding, architecture, quality, reliability, and shipping. Non-engineer contributions don&#39;t reduce what we expect from engineers. They amplify it. The entire organization now ships alongside them.</p>
+<p>629 merged PRs in 60 days. 40 from non-engineers.</p>
+
+    </article>
+
+    <hr class="feed-hero__divider" />
+    <p class="feed-hero__subscribe-label">
+      Subscribe to get future posts via email (or grab the <a href="/feed/rss.xml">RSS feed</a>)
+    </p>
+    
+    <section class="subscribe subscribe--compact" id="subscribe">
+      
+      <form action="https://buttondown.com/api/emails/embed-subscribe/viljami"
+        method="post" class="subscribe__form">
+        <input type="email" name="email" placeholder="Type your email&hellip;" required aria-label="Email address" />
+        <button type="submit" class="btn btn-primary">Subscribe</button>
+      </form>
+    </section>
+  </main>
+
+  <footer class="impressum">
+    <p><a href="/feed/">&larr; All posts</a></p>
+  </footer>
+
+</body>
+
+</html>

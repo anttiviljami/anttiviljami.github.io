@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>First year as Head of Engineering @epilot - Killing the Legacy Monolith — Viljami Kuosmanen</title>
+  <meta name="description" content="This post is a personal account of my experience at epilot.cloud and our journey rebuilding our..." />
+  <meta name="theme-color" content="#0e0f12" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#fafaf7" media="(prefers-color-scheme: light)" />
+  <meta property="og:title" content="First year as Head of Engineering @epilot - Killing the Legacy Monolith — Viljami Kuosmanen" />
+  <meta property="og:description" content="This post is a personal account of my experience at epilot.cloud and our journey rebuilding our..." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://viljami.io/feed/my-first-year-as-epilots-head-of-engineering-killing-the-legacy-monolith/" />
+  <link rel="canonical" href="https://viljami.io/feed/my-first-year-as-epilots-head-of-engineering-killing-the-legacy-monolith/" />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="alternate icon" href="/assets/favicon.png" type="image/png" />
+  <link rel="alternate" type="application/rss+xml" title="Viljami Kuosmanen &mdash; Feed" href="https://viljami.io/feed/rss.xml" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+
+  <main class="card feed-card post">
+    <header class="hero">
+      <p class="eyebrow"><a href="/feed/">&larr; Viljami.io / Feed</a></p>
+      <h1>First year as Head of Engineering @epilot - Killing the Legacy Monolith</h1>
+      <p class="title">June 17, 2022</p>
+    </header>
+
+    <article class="post__body">
+<p>This post is a personal account of my experience at <a href="https://epilot.cloud/en/">epilot.cloud</a> and our journey rebuilding our legacy Java monolith SaaS from the ground up with AWS, serverless and microfrontends, mostly during 2021.</p>
+<p>The text is written from the perspective of engineering and focuses on the challenges I faced taking on leadership of our growing team of 25+ engineers.</p>
+<p>I fully acknowledge this is not the complete picture of epilot&#39;s growth during this time as we have many other amazing departments and individuals working to make epilot the next tech unicorn success story.</p>
+<p>Full disclosure, I love this company and am heavily invested in the product&#39;s success after my first year and a half. 💙</p>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/5ybon69p9qvdgay6b7vh.jpg" alt="Cologne Carnival"></p>
+<p>(I&#39;m the one dressed up as the doctor for our company&#39;s annual Cologne carnival celebration)</p>
+<h2>Beginnings</h2>
+<p>I joined the Cologne-based startup epilot in October 2020 as a cloud engineer to head a new platform team and aid the product team transition to serverless AWS.</p>
+<p>The task felt right in my wheelhouse.</p>
+<p>By that time I already had three real serverless products under my belt, had experience migrating monoliths to microservices, and had acquired more than 8 years of professional experience in total as a developer and team lead working mostly with AWS and other cloud platforms.</p>
+<p>I knew startups. I had experience with the business domain. I knew the technology well.</p>
+<p>This was my time to shine.</p>
+<h2>Build better software, faster.</h2>
+<p>As our CTO Szilard Toth put it in our first discussions, my job description was to help us &quot;build better software, faster&quot;.</p>
+<p>I took that mission statement very seriously.</p>
+<p>Coming off a 4-year stint at <a href="https://futurice.com">Futurice</a>, a lean service design focused consultancy, my first instinct was to make a current state analysis of my new company - epilot.</p>
+<p>To get my bearings, I joined one of the engineering teams and got busy.</p>
+<p>I learned about the challenges our teams were facing and got a deeper view into our legacy product, which had already been in active development for more than 3 years.</p>
+<p>We were already doing a lot of things right: All three teams at the time were generally following agile practices, engineers were eager to discuss and learn their new tools, many had even taken the time to get AWS certified.</p>
+<p>But there were certainly some big concerns.</p>
+<p>At the end of my first full month, I was ready to present my learnings to the company.</p>
+<h2>First insights</h2>
+<p>I published an internal document titled &quot;epilot Tech Review&quot; detailing my assessment of the current state of epilot&#39;s engineering.</p>
+<p>These were the main findings:</p>
+<ol>
+<li>The decision made (before my time) to pick AWS, serverless and React as our foundation was a good one for what the team wanted to achieve: Low operating costs and high development speed. This was especially great for hiring due to many candidates being attracted to these modern technologies.</li>
+<li>Our teams lacked experience working with these technologies. Progress was slow and unfortunate decisions were made with the very first small scale serverless projects.</li>
+<li>Alarmingly, the engineering team had no viable plan or strategy to migrate the legacy product to the new serverless architecture. Everyone was excited about the new tech but we clearly had no clue how to actually build our product with it.</li>
+</ol>
+<p>I emphasised in the document how important it was for epilot&#39;s success to move away from the legacy technology stack, a proprietary monolithic Java framework which had already proven to be a poor fit for our use case, difficult to run and extremely slow to develop new features on.</p>
+<p>Our ability to deliver as an engineering team was looking pretty grim. The company had already invested a full year into going serverless with not much to show for it.</p>
+<p>To make matters worse, some of our key engineers had just announced they were leaving the company.</p>
+<p>In spite of our woes on the engineering side, epilot had a rare advantage:</p>
+<p>A proven product-market fit – Even with our product leaving much to be desired, our paying customers were becoming fans!</p>
+<p>Yes, they were sometimes frustrated with the quality of the software and our inability to deliver features they were asking for, but they were totally bought into the vision of what epilot could be and we were clearly delivering value for them.</p>
+<p>I think this was thanks to our visionary leadership with deep industry knowledge knowing which problems to solve along with a great sales team and a MacGyver-like customer success team working around the limitations of our software.</p>
+<p>We had the right idea, just not a great technical execution yet.</p>
+<p>Luckily I knew I could make a difference when it comes to execution.</p>
+<h2>RFCs and API first</h2>
+<p>I went on to establish the platform team I was hired for. We started small with myself and an SRE who had been at epilot a year before me.</p>
+<p>The first things the team tackled were improvements to developer workflows such as enabling an <a href="https://dev.to/epilot/why-we-design-apis-first-e85">API Design First approach</a> for our serverless APIs and building common CI/CD pipelines for the tools our teams were using.</p>
+<p>I introduced RFCs for the teams as a tool to discuss designs and proposals to improve our product and work.</p>
+<p>With key engineers leaving us, it was important to establish an open culture with teams making independent decisions while focusing on good software design and communication.</p>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/s6ofxs17i2550m8mttjq.png" alt="RFCs"></p>
+<p>As one of the very first RFCs shared, I laid out my admittedly optimistic plan to move away from our legacy monolith app.</p>
+<h2>The radical 360 plan</h2>
+<p>I brought my plan directly to senior company leadership triggering a series of discussions in late 2020 to figure out our legacy migration strategy.</p>
+<p>In sessions with our CEO Michel, CTO Szilard and head of sales Marlon, it became very clear this would not be just a migration from monolith to serverless. We needed to build the new version of epilot SaaS with a radically different design, starting from a new flexible data layer to power the diverse set of use cases our customers were asking for.</p>
+<p>We called it epilot 360. And it would be my job to build it.</p>
+<p>From the start of 2021, we established a new strike team to head the effort of building 360. I doubled as the leader of both the platform team and the new 360 team.</p>
+<p>The 360 plan was radical. We would completely rebuild our main portal interface using frontend microservices and embed the old product into the new portal as a microfrontend to provide backwards compatibility while we rebuild and migrate features one by one in the new serverless world.</p>
+<p>Getting the old monolith to work in the new portal was our first big technical hurdle. We developed a &quot;headless&quot; mode for the old app, where the UI was modified to fit into the new portal layout and implemented secure communication with the parent 360 app to pass information like the current user&#39;s session to the legacy app.</p>
+<p>From the data side, we continued to split up the legacy SQL database into serverless microservices. We introduced <a href="https://hasura.io/">Hasura</a> to act as the gateway to synchronise data between the legacy database and our new serverless services.</p>
+<p>By March 2021, we had migrated our first module to 360 using the new flexible data model and had shipped a new portal microfrontend for it.</p>
+<p>We introduced <a href="https://www.datadoghq.com/">Datadog</a> for centralised logging and monitoring, as well as to provide crucial analytics and observability tools for our new serverless product.</p>
+<p>Finally in July of 2021, we greeted all our users with a whole new 360  login and portal experience, wrapping the old familiar app in our brand new look with serverless features already replacing many legacy views.</p>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/w624qiz00mq762xdyh7o.png" alt="New 360 Login"></p>
+<p>This felt like the first big launch of 360. Although lots of work was still ahead to fully get rid of our legacy app, our users were happy to see us start to deliver on our promises with a new major release of the epilot product.</p>
+<p>From here on the rate of new releases in our app would radically increase.</p>
+<h2>Head of Engineering</h2>
+<p>In May of 2021, I was officially promoted to head of engineering which meant I was no longer just in charge of the platform team and the 360 team. I was now in charge of the entire engineering team with our CTO shifting his focus away from engineering to product management.</p>
+<p>In the meantime we had also ramped up our recruitment efforts. We published our in-house <a href="https://github.com/epilot-dev/engineering-principles">engineering principles</a> and built a new recruitment landing page <a href="https://promise.epilot.cloud/">promise.epilot.cloud</a> to showcase our culture. As a result, we managed to acquire some amazing new engineering talent during 2021. &lt;3</p>
+<p>So far it had been mostly just my small team of 4 developers working on 360. Now as the new head of department, I needed to shift the focus of all our by now 25+ engineers and 6 teams to work on the new 360 platform.</p>
+<p>This came with some major challenges.</p>
+<h2>Scaling the team</h2>
+<p>One of the biggest challenges was the radically different underlying design of 360 with its flexible data model as opposed to our legacy product&#39;s traditional static data model.</p>
+<p>Teams initially struggled to wrap their heads around the new <a href="https://docs.epilot.io/docs/entities/flexible-entities">flexible entities</a>; not least because of my struggle to communicate it properly. Through some much needed visual design support and hands-on experience with the product, we slowly built up an understanding of our new 360 product together.</p>
+<p>A major focus of the architectural design of 360 was on modularity by utilising frontend and backend microservices combined with our API First software design approach.</p>
+<p>This was to allow teams to work independently giving them the freedom to choose their own tools and ways to solve problems.</p>
+<p>We found this approach to be a big success as it kept our projects small with teams motivated to try out new technologies, share and learn from other teams, and quickly change approaches when needed.</p>
+<p>After the first few months of teams working on 360 it was clear that we were able to move much faster than ever before with our new tech stack.</p>
+<p>We adopted continuous deployment across all teams and quickly surpassed an average of &gt;100 production releases each week. This was a huge achievement considering that back when I joined we were able to deploy only 1-2 times per week during a pre-defined maintenance window!</p>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/p8bt6azzs70scun0o57v.png" alt="Production Deployments Graph"></p>
+<p>By the end of 2021, all our teams had shipped major features on the 360 product and we had reached enough feature parity for the first new users to be onboarded to epilot completely on 360 with no trace of the legacy product.</p>
+<p>We had an MLP - Minimum Lovable Product!</p>
+<p>Things would speed up even more throughout the first half of 2022 with teams getting comfortable with 360, shipping more serverless features to get us closer to the magical feature parity state with our rather large legacy product.</p>
+<p>We opened up the 360 platform to external developers and partners with our <a href="https://docs.epilot.io/">public developer docs</a> and <a href="https://github.com/epilot-dev/sdk-js/">open source SDK</a>.</p>
+<p>In the meantime our sales and customer success teams have been actively engaged with existing customers to help them migrate to 360. More and more users are now adopting the new features each week and we’re learning from them to make 360 even better.</p>
+<h2>Takeaways from the first year</h2>
+<p>As I&#39;m writing this post in June 2022, after my first full year as head of engineering and after almost a year of running the main epilot application in production on AWS serverless and frontend microservices, I can&#39;t help but ask myself:</p>
+<p>Was 360 a success?</p>
+<p>While my ego would love to give a resounding &quot;Yes!&quot; as the answer, I can&#39;t be fully satisfied until we&#39;ve fully completed the migration of all features from the legacy app and have successfully shut down the old monolith and moved on with happy users.</p>
+<p>We&#39;re not quite there yet.</p>
+<p>Are we building better software, faster? – Yes! The feedback from our customers is very positive and our product teams are delivering features 10x faster than we were back in 2020 when I joined. We&#39;re demoing new features every week now!</p>
+<p>Are we on track getting rid of our legacy monolith? – Yes! At the time of writing, we&#39;re close to 90% feature parity with more users hopping over to 360 each week.</p>
+<p>Was it way more difficult than initially thought? – Heck yes! The people side of things turned out to be much more complex than the technical side – as always.</p>
+<p>It isn’t easy to align 5 remote product teams to work on a new product redesigned and rebuilt from the ground up.</p>
+<p>It isn&#39;t easy to introduce big changes to our tech stack, product, and engineering culture.</p>
+<p>It isn&#39;t easy to keep our users happy while introducing a new product with major design changes and new concepts to learn.</p>
+<p>While none of these things are easy, they are surely worthwhile and we strive to get better every day.</p>
+<h2>Conclusion</h2>
+<p>Looking back, I&#39;ve learned a lot in the past year about leadership, engineering and building products.</p>
+<p>With our engineer teams now working well, I&#39;ve been able to focus my daily work on helping our customers and technical partners hands-on with their adoption of 360. This has really helped me gain better perspective on where the 360 product stands today from our users&#39; perspective.</p>
+<p>I&#39;ve received a ton of feedback; from customers, from colleagues, and from our leadership team.</p>
+<p>I’m glad to say things are looking bright for epilot 360!</p>
+<p>Still lots to learn and build.</p>
+
+    </article>
+
+    <hr class="feed-hero__divider" />
+    <p class="feed-hero__subscribe-label">
+      Subscribe to get future posts via email (or grab the <a href="/feed/rss.xml">RSS feed</a>)
+    </p>
+    
+    <section class="subscribe subscribe--compact" id="subscribe">
+      
+      <form action="https://buttondown.com/api/emails/embed-subscribe/viljami"
+        method="post" class="subscribe__form">
+        <input type="email" name="email" placeholder="Type your email&hellip;" required aria-label="Email address" />
+        <button type="submit" class="btn btn-primary">Subscribe</button>
+      </form>
+    </section>
+  </main>
+
+  <footer class="impressum">
+    <p><a href="/feed/">&larr; All posts</a></p>
+  </footer>
+
+</body>
+
+</html>

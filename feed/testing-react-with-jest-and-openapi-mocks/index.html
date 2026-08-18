@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Testing React With Jest and OpenAPI mocks — Viljami Kuosmanen</title>
+  <meta name="description" content="Kent C. Dodds recently wrote a very interesting post calling an end to mocking window.fetch when..." />
+  <meta name="theme-color" content="#0e0f12" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#fafaf7" media="(prefers-color-scheme: light)" />
+  <meta property="og:title" content="Testing React With Jest and OpenAPI mocks — Viljami Kuosmanen" />
+  <meta property="og:description" content="Kent C. Dodds recently wrote a very interesting post calling an end to mocking window.fetch when..." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://viljami.io/feed/testing-react-with-jest-and-openapi-mocks/" />
+  <link rel="canonical" href="https://viljami.io/feed/testing-react-with-jest-and-openapi-mocks/" />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="alternate icon" href="/assets/favicon.png" type="image/png" />
+  <link rel="alternate" type="application/rss+xml" title="Viljami Kuosmanen &mdash; Feed" href="https://viljami.io/feed/rss.xml" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+
+  <main class="card feed-card post">
+    <header class="hero">
+      <p class="eyebrow"><a href="/feed/">&larr; Viljami.io / Feed</a></p>
+      <h1>Testing React With Jest and OpenAPI mocks</h1>
+      <p class="title">June 12, 2020</p>
+    </header>
+
+    <article class="post__body">
+<p>Kent C. Dodds recently wrote a <a href="https://kentcdodds.com/blog/stop-mocking-fetch">very interesting post</a> calling an end to mocking <code>window.fetch</code> when testing React applications:</p>
+<blockquote class="twitter-tweet"><a href="https://twitter.com/x/status/1270359083409965057"></a></blockquote><p>He was right.</p>
+<p>I just recently had to migrate a React project from a fetch based API client implementation to an <a href="https://github.com/anttiviljami/openapi-client-axios">axios based one</a> where the tests heavily relied on mocking <code>global.fetch</code>. It very quickly became apparent why this is not good practice.</p>
+<p>I ended up having to write my own test utility that would mock both fetch and the new API client. It never looks good when you have to change tests to prove your code didn&#39;t change anything for the user.</p>
+<p>As a better alternative, Kent suggests using a <em>Mock Service Worker</em>. More specifically the <a href="https://github.com/mswjs/msw">msw module</a> to essentially run a mock backend as a service worker that intercepts all outgoing API requests to handle them.</p>
+<h3>Setting up msw</h3>
+<p>Setting up a mock backend with msw for your React tests turns out to be a fairly easy process. To get a deeper picture you should check out <a href="https://kentcdodds.com/blog/stop-mocking-fetch">Kent&#39;s original post</a>, but here&#39;s all you really need to do in your test code to mock a REST endpoint:</p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> { rest } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;msw&#x27;</span>;
+<span class="hljs-keyword">import</span> { setupServer } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;msw/node&#x27;</span>;
+
+<span class="hljs-keyword">const</span> server = <span class="hljs-title function_">setupServer</span>(
+  rest.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/api/pets&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">req, res, ctx</span>) =&gt;</span> {
+    <span class="hljs-keyword">const</span> pets = [{ <span class="hljs-attr">id</span>: <span class="hljs-number">1</span>, <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;Garfield&#x27;</span>, <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;cat&#x27;</span> }];
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">res</span>(ctx.<span class="hljs-title function_">json</span>({ pets }));
+  }),
+);
+
+<span class="hljs-title function_">beforeAll</span>(<span class="hljs-function">() =&gt;</span> server.<span class="hljs-title function_">listen</span>());
+<span class="hljs-title function_">afterAll</span>(<span class="hljs-function">() =&gt;</span> server.<span class="hljs-title function_">close</span>());
+</code></pre><p>One of the reasons this is extremely cool is because it avoids the pain of having to start up a real local mock backend, such as an express server that needs to be bound to a specific port on the host running the test.</p>
+<p>This helps keep your tests fast and simple to run, as they should be.</p>
+<h3>Even better with OpenAPI</h3>
+<p>As someone who works a lot with API backends that (hopefully!) provide Swagger/OpenAPI definitions, I had already been mocking my backends in React tests using OpenAPI mocks with <a href="https://github.com/anttiviljami/openapi-backend">openapi-backend</a>. When I learned about <code>msw</code>, I was thrilled!</p>
+<p>It turns out <code>msw</code> together with <code>openapi-backend</code> is the perfect combination for mocking REST apis.</p>
+<p>To provide a full mock for an API, all I need is to create a mock backend with openapi-backend using the API definition and tell msw to use it:</p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> { rest } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;msw&#x27;</span>;
+<span class="hljs-keyword">import</span> { setupServer } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;msw/node&#x27;</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">OpenAPIBackend</span> <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;openapi-backend&#x27;</span>;
+<span class="hljs-keyword">import</span> definition <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;./path/to/definition.json&#x27;</span>;
+
+<span class="hljs-comment">// create our mock backend with openapi-backend</span>
+<span class="hljs-keyword">const</span> api = <span class="hljs-keyword">new</span> <span class="hljs-title class_">OpenAPIBackend</span>({ definition });
+api.<span class="hljs-title function_">register</span>(<span class="hljs-string">&#x27;notFound&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">c, res, ctx</span>) =&gt;</span> <span class="hljs-title function_">res</span>(ctx.<span class="hljs-title function_">status</span>(<span class="hljs-number">404</span>)));
+api.<span class="hljs-title function_">register</span>(<span class="hljs-string">&#x27;notImplemented&#x27;</span>, <span class="hljs-title function_">async</span> (c, res, ctx) =&gt; {
+  <span class="hljs-keyword">const</span> { status, mock } = api.<span class="hljs-title function_">mockResponseForOperation</span>(c.<span class="hljs-property">operation</span>.<span class="hljs-property">operationId</span>);
+  ctx.<span class="hljs-title function_">status</span>(status);
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">res</span>(ctx.<span class="hljs-title function_">json</span>(mock));
+});
+
+
+<span class="hljs-comment">// tell msw to intercept all requests to api/* with our mock</span>
+<span class="hljs-keyword">const</span> server = <span class="hljs-title function_">setupServer</span>(
+  rest.<span class="hljs-title function_">all</span>(<span class="hljs-string">&#x27;/api/*&#x27;</span>, <span class="hljs-title function_">async</span> (req, res, ctx) =&gt; api.<span class="hljs-title function_">handleRequest</span>(
+    {
+      <span class="hljs-attr">path</span>: req.<span class="hljs-property">url</span>.<span class="hljs-property">pathname</span>,
+      <span class="hljs-attr">query</span>: req.<span class="hljs-property">url</span>.<span class="hljs-property">search</span>,
+      <span class="hljs-attr">method</span>: req.<span class="hljs-property">method</span>,
+      <span class="hljs-attr">body</span>: req.<span class="hljs-property">bodyUsed</span> ? <span class="hljs-keyword">await</span> req.<span class="hljs-title function_">json</span>() : <span class="hljs-literal">null</span>,
+      <span class="hljs-attr">headers</span>: { ...req.<span class="hljs-property">headers</span>.<span class="hljs-property">raw</span> },
+    },
+    res,
+    ctx,
+  )),
+);
+
+<span class="hljs-title function_">beforeAll</span>(<span class="hljs-function">() =&gt;</span> server.<span class="hljs-title function_">listen</span>());
+<span class="hljs-title function_">afterAll</span>(<span class="hljs-function">() =&gt;</span> server.<span class="hljs-title function_">close</span>());
+</code></pre><p>Now instead of having to write your own mock handlers for each operation, they&#39;re generated from the response schemas and examples defined in the OpenAPI document.</p>
+<p>What&#39;s more: any time the API definition changes, all your mocks will be automatically updated giving you further confidence your app is compatible with the new API version.</p>
+<h3>Enabling Request Validation</h3>
+<p>When testing, it&#39;s often very useful to make sure your application is actually sending the correct requests to the API.</p>
+<p>Working with OpenAPI definitions has the benefit that API operations are well defined and requests can be automatically validated using JSON schema.</p>
+<p>To enable request validation during tests, you can simply register the <a href="https://github.com/anttiviljami/openapi-backend/blob/master/DOCS.md#validationfail-handler">validationFail handler</a> for openapi-backend:</p>
+<pre><code class="hljs language-javascript">api.<span class="hljs-title function_">register</span>(<span class="hljs-string">&#x27;validationFail&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">c, res, ctx</span>) =&gt;</span> <span class="hljs-title function_">res</span>(
+  ctx.<span class="hljs-title function_">status</span>(<span class="hljs-number">400</span>),
+  ctx.<span class="hljs-title function_">json</span>({ <span class="hljs-attr">error</span>: c.<span class="hljs-property">validation</span>.<span class="hljs-property">errors</span> }),
+));
+</code></pre><p>When running tests, a malformed call to an API endpoint will now result in a 400 Bad Request error from the mock backend, alongside a useful error message telling you what&#39;s wrong with the request.</p>
+<h3>Custom Handlers</h3>
+<p>In some tests it might make sense to provide a different mock than the default one as provided by openapi-backend.</p>
+<p>Registering your own mock for an API operation in a test is as simple as calling <code>api.register()</code> with the operationId and a mock handler:</p>
+<pre><code class="hljs language-javascript"><span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;should call getPets operation&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-comment">// given</span>
+  <span class="hljs-keyword">const</span> mockResponse = [{ <span class="hljs-attr">id</span>: <span class="hljs-number">2</span>, <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;Odie&#x27;</span> }];
+  <span class="hljs-keyword">const</span> mockHandler = jest.<span class="hljs-title function_">fn</span>(<span class="hljs-function">(<span class="hljs-params">c, res, ctx</span>) =&gt;</span> <span class="hljs-title function_">res</span>(ctx.<span class="hljs-title function_">json</span>(mockResponse)));
+  api.<span class="hljs-title function_">register</span>(<span class="hljs-string">&#x27;getPets&#x27;</span>, mockHandler);
+
+  <span class="hljs-comment">// when</span>
+  <span class="hljs-comment">// render(&lt;MyComponent /&gt;)...</span>
+
+  <span class="hljs-comment">// then</span>
+  <span class="hljs-title function_">expect</span>(mockHandler).<span class="hljs-title function_">toBeCalled</span>();
+});
+</code></pre><h3>Conclusion</h3>
+<p>Finding out about msw was a major game changer for my React testing. This in combination with the auto-mocking capabilities of <a href="https://github.com/anttiviljami/openapi-backend">openapi-backend</a> makes mocking APIs in React tests a breeze.</p>
+<p>Thank you, Kent, and the team behind <a href="https://github.com/mswjs/msw">mswjs/msw</a>! 💙</p>
+
+    </article>
+
+    <hr class="feed-hero__divider" />
+    <p class="feed-hero__subscribe-label">
+      Subscribe to get future posts via email (or grab the <a href="/feed/rss.xml">RSS feed</a>)
+    </p>
+    
+    <section class="subscribe subscribe--compact" id="subscribe">
+      
+      <form action="https://buttondown.com/api/emails/embed-subscribe/viljami"
+        method="post" class="subscribe__form">
+        <input type="email" name="email" placeholder="Type your email&hellip;" required aria-label="Email address" />
+        <button type="submit" class="btn btn-primary">Subscribe</button>
+      </form>
+    </section>
+  </main>
+
+  <footer class="impressum">
+    <p><a href="/feed/">&larr; All posts</a></p>
+  </footer>
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+</body>
+
+</html>

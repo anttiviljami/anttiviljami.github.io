@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>We Locked Ourselves Out of Production — Viljami Kuosmanen</title>
+  <meta name="description" content="A few months back an engineer was setting up a build pipeline with an AI coding agent. The agent held..." />
+  <meta name="theme-color" content="#0e0f12" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#fafaf7" media="(prefers-color-scheme: light)" />
+  <meta property="og:title" content="We Locked Ourselves Out of Production — Viljami Kuosmanen" />
+  <meta property="og:description" content="A few months back an engineer was setting up a build pipeline with an AI coding agent. The agent held..." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://viljami.io/feed/we-locked-ourselves-out-of-production/" />
+  <link rel="canonical" href="https://viljami.io/feed/we-locked-ourselves-out-of-production/" />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="alternate icon" href="/assets/favicon.png" type="image/png" />
+  <link rel="alternate" type="application/rss+xml" title="Viljami Kuosmanen &mdash; Feed" href="https://viljami.io/feed/rss.xml" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+
+  <main class="card feed-card post">
+    <header class="hero">
+      <p class="eyebrow"><a href="/feed/">&larr; Viljami.io / Feed</a></p>
+      <h1>We Locked Ourselves Out of Production</h1>
+      <p class="title">August 18, 2026</p>
+    </header>
+
+    <article class="post__body">
+<p>A few months back an engineer was setting up a build pipeline with an AI coding agent. The agent held production AWS credentials. It created a CloudFormation stack in production, then &quot;cleaned up&quot; by deleting it. Straight in prod, outside CI/CD.</p>
+<p>Our monitoring caught it immediately. An alert fired the moment the change happened: deployment in the production account by a role that is not part of the approved CI/CD pipeline.</p>
+<p>Nothing broke. The engineer had confirmed each step, and detection worked exactly as designed. But detection is not prevention. If the agent had deleted the wrong stack, the alert would have fired too. And everyone would be having a really bad day.</p>
+<p>Nothing happened but the moment scared me enough to take a step back to rethink how we deal with engineer production access.</p>
+<p>You&#39;ve read the public versions of this story. <a href="https://www.fastcompany.com/91533544/cursor-claude-ai-agent-deleted-software-company-pocket-os-database-jer-crane">An agent wiped a founder&#39;s production database through Cursor during ordinary development work</a>. Replit&#39;s agent <a href="https://www.tomshardware.com/tech-industry/artificial-intelligence/ai-coding-platform-goes-rogue-during-code-freeze-and-deletes-entire-company-database-replit-ceo-apologizes-after-ai-engine-says-it-made-a-catastrophic-error-in-judgment-and-destroyed-all-production-data">deleted a production database during a code freeze, then fabricated thousands of fake records to cover it up</a>. The pattern is always the same: a &quot;clean up and roll back&quot; that looks reasonable to an agent and is catastrophic in production.</p>
+<p>We run AI agents across engineering, and we want to. It&#39;s part of how epilot operates. But our AWS access model was designed before that, and it assumed a careful human is the only thing holding production credentials.</p>
+<p>That assumption is dead. Today we buried it: no engineer at epilot can reach production AWS directly from their laptop anymore. Not the CLI, not the console. Here&#39;s what replaced it.</p>
+<h2>The design</h2>
+<p><img src="https://dev-to-uploads.s3.us-east-2.amazonaws.com/uploads/articles/jdp25rvf1hf3u7kzx3ab.png" alt="broker flowchart"></p>
+<p>Production access at epilot was already technically short-lived: time-limited sessions behind MFA. On paper, that looks fine.</p>
+<p>In practice, sessions outlive the reason you opened them. You assume prod for a quick check, switch to another task, and a live production session stays behind on your machine. Usually as the global default AWS CLI profile.</p>
+<p>That means every process on the laptop is connected to production by default. Your test suite. Your scripts. Every AI agent you run. Nobody decided that. It&#39;s just what a global profile on a busy machine does.</p>
+<p>So we changed who the prod roles trust. Developer identities can&#39;t assume them at all anymore. The roles trust exactly one principal: an internal access broker. And the broker only mints a session after a human walks through two separate surfaces: a web portal behind SSO (the portal and its REST API both sit behind it) and a manual approval in Slack.</p>
+<p>The flow:</p>
+<ol>
+<li><strong>Request.</strong> Open the Admin Portal, pick an access level and a duration, write why you need it. Takes 30 seconds.</li>
+<li><strong>Approve.</strong> The portal posts your request to a Slack channel the whole company can see, and you approve it there. This is the trick: the Slack approval is a second factor, not a peer review. It&#39;s a separate app on a separate surface, so an agent driving your terminal or your browser session can&#39;t complete it. Approving your own request is fine. Another engineer can approve it too, but nobody has to. The Slack thread is the audit log.</li>
+<li><strong>Connect.</strong> The broker mints a session named after you and its approver, then you choose: a one-click sign-in link to the AWS Console, or a throwaway EC2 jump host. The jump host lives in a private subnet, reachable only through Session Manager. No SSH keys, no open ports. Ready in about 90 seconds.</li>
+<li><strong>Expire.</strong> Sessions die on their own. Jump hosts are destroyed with them.</li>
+</ol>
+<p>There are three access levels, and the default is read-only:</p>
+<ul>
+<li><strong>Read-only</strong>: inspect resources, read logs and metrics. No writes, no deploys. This covers most production visits.</li>
+<li><strong>Developer</strong>: day-to-day production support. Deploy through the CI/CD pipeline (never around it), read logs, manage infra. Cannot delete stacks, read SSM secrets, touch customer data directly or decrypt with KMS CMKs.</li>
+<li><strong>Administrator</strong>: full access. Assume only if you absolutely need it.</li>
+</ul>
+<p><img src="https://dev-to-uploads.s3.us-east-2.amazonaws.com/uploads/articles/4z17a5wxk32yt6m40bcn.png" alt="access request dialog"></p>
+<p>Notice what the developer tier can&#39;t do. Accessing customer data at epilot is intentionally difficult. No direct reads from the data stores, no decrypting with customer-managed KMS keys, not even for day-to-day production support. And even read-only goes through the broker. We treat read access as access.</p>
+<p>Escalation is deliberate, like everything else in the flow. You don&#39;t get developer access out of habit. You ask for it, and the reason sits in Slack next to your name.</p>
+<p>The access page in our Admin Portal states the whole contract in four principles: deliberate and isolated, second-factor approval, attributed and time-limited, least privilege. That&#39;s not a compliance poster. It&#39;s literally the UI copy engineers read while requesting access.</p>
+<p>The jump host is the hardened path: <strong>no AI agents installed, none allowed</strong>, only the minimal tooling for production support, with full shell-session and AWS API logging. Clickops and incident investigation still work. That&#39;s what the console link is for. But a console session is still a browser, so we treat it as the weaker option and the jump host as the default.</p>
+<p>For emergencies there&#39;s a separate break-glass admin role. A small named group can assume it directly with MFA, and every use fires a loud alert in our security channel. Emergency access stays open without reopening the everyday hole.</p>
+<h2>Self-approval? Seriously?</h2>
+<p><img src="https://dev-to-uploads.s3.us-east-2.amazonaws.com/uploads/articles/p6vpzkthbyq5qehy86sm.png" alt="Self approved request"></p>
+<p>The first reaction to this design is always the same: what&#39;s the point if you approve yourself?</p>
+<p>Our engineers were always trusted with production. You build it, you run it. That hasn&#39;t changed. A second human clicking &quot;approve&quot; would add latency and theatre, not security. Rubber-stamp approvals are how big orgs pretend to have controls.</p>
+<p>The threats we&#39;re closing are ambient credentials and autonomous agents. Those are handled by the credential-free laptop and the out-of-band approval, not by another pair of eyes.</p>
+<h2>What this doesn&#39;t solve</h2>
+<p>An approved human can still break production. So can an agent driving an approved console session. The goal was never to make damage impossible. It&#39;s to make production access deliberate, attributed and temporary instead of ambient.</p>
+<p>The broker itself is now a high-value target. It&#39;s the only thing that can assume prod roles, so we scoped it tightly, locked it down and watch it closely. We&#39;ve concentrated the risk in one small surface we can actually defend, instead of spreading it across every laptop in the company.</p>
+<p>Break-glass is a deliberate bypass. We contain it with a tiny group, MFA and loud alerting rather than pretending it doesn&#39;t exist.</p>
+<p>Can&#39;t an agent just approve itself in Slack?</p>
+<p>Yes, technically. A rogue agent running on your machine could technically take over your browser session to create the request, then access Slack to approve it.</p>
+<p>But to get there, a lot of things already have to have gone really badly wrong:</p>
+<ol>
+<li>You gave the agent full access to your browser with a logged in admin session.</li>
+<li>You gave the agent full access to Slack.</li>
+<li>You let the agent act without verifying anything. Nothing and no one is checking what it does.</li>
+<li>The agent decided to go out of its way to find out how to do this and perform all the steps</li>
+</ol>
+<p>But this is of course not a realistic agent setup any engineer at epilot would run. Security always comes in layers. What we prevent with this setup are the common footguns where it was too easy to give AI unfiltered prod access.</p>
+<h2>The rollout</h2>
+<p>We ran the broker for two weeks alongside the old access and asked engineers to stop using their direct prod roles. Today we flipped the trust policies and removed direct assumption entirely.</p>
+<p>The announcement slack post filled with celebration emojis. Engineers cheering for losing production access tells you something about how everyone actually feels about agents sitting next to prod credentials.</p>
+<p>This is how we approach cloud security in general. Security at epilot is not a separate department reviewing things after the fact. It&#39;s a core engineering competence: every engineer builds it, runs it and secures it, and external pentests keep us honest. The architecture does the enforcing: SSO in front of everything, CI/CD as the only path to deploy, monitoring that flags a rogue change within seconds, and production access that requires deliberate, named, visible intent.</p>
+<p>Accessing customer data is supposed to be difficult. We built it that way on purpose.</p>
+<p>We didn&#39;t build this because we fear AI agents. We built it because we run them everywhere and intend to run more. Banning agents is easy. YOLOing them into production is even easier. Building the rails that let you run them at full speed is the actual work, and it&#39;s why we&#39;ll adopt the next generation of agents faster than the companies still deciding whether to allow them.</p>
+<p>You build it, you run it still stands. You just don&#39;t run it from the machine your agent lives on.</p>
+
+    </article>
+
+    <hr class="feed-hero__divider" />
+    <p class="feed-hero__subscribe-label">
+      Subscribe to get future posts via email (or grab the <a href="/feed/rss.xml">RSS feed</a>)
+    </p>
+    
+    <section class="subscribe subscribe--compact" id="subscribe">
+      
+      <form action="https://buttondown.com/api/emails/embed-subscribe/viljami"
+        method="post" class="subscribe__form">
+        <input type="email" name="email" placeholder="Type your email&hellip;" required aria-label="Email address" />
+        <button type="submit" class="btn btn-primary">Subscribe</button>
+      </form>
+    </section>
+  </main>
+
+  <footer class="impressum">
+    <p><a href="/feed/">&larr; All posts</a></p>
+  </footer>
+
+</body>
+
+</html>

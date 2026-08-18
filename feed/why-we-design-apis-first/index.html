@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>API First: How Teams Collaborate on Software Design — Viljami Kuosmanen</title>
+  <meta name="description" content="TL;DR:   APIs are the single most useful design tool for teams collaborating on software. Teams who..." />
+  <meta name="theme-color" content="#0e0f12" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#fafaf7" media="(prefers-color-scheme: light)" />
+  <meta property="og:title" content="API First: How Teams Collaborate on Software Design — Viljami Kuosmanen" />
+  <meta property="og:description" content="TL;DR:   APIs are the single most useful design tool for teams collaborating on software. Teams who..." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://viljami.io/feed/why-we-design-apis-first/" />
+  <link rel="canonical" href="https://viljami.io/feed/why-we-design-apis-first/" />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="alternate icon" href="/assets/favicon.png" type="image/png" />
+  <link rel="alternate" type="application/rss+xml" title="Viljami Kuosmanen &mdash; Feed" href="https://viljami.io/feed/rss.xml" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+
+  <main class="card feed-card post">
+    <header class="hero">
+      <p class="eyebrow"><a href="/feed/">&larr; Viljami.io / Feed</a></p>
+      <h1>API First: How Teams Collaborate on Software Design</h1>
+      <p class="title">December 17, 2020</p>
+    </header>
+
+    <article class="post__body">
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/i/ra5ayqosajpsvy8iqa17.png" alt="Winter is here"></p>
+<p><strong>TL;DR:</strong></p>
+<ul>
+<li>APIs are the single most useful design tool for teams collaborating on software.</li>
+<li>Teams who focus on API design produce better designed software and collaborate more efficiently by parallelising their work around concrete technical contracts.</li>
+<li>Thinking of APIs as the core way to add features into software leads into building up a platform for developers to bootstrap new features on top of a library of existing core APIs.</li>
+</ul>
+<h3>Software Design &amp; Features</h3>
+<p>As developers we intuitively think of features as the basic building blocks for the software we design and build.</p>
+<p>Features are the capabilities our software provides. They answer the question: What does the software do?</p>
+<p>We design software around features. Some features are user-facing while many features are purely technical and serve internal purposes to make the system as a whole work. </p>
+<p>A software team will add new features, extend existing features and sometimes deprecate and remove old features to be succeeded by new improved ones.</p>
+<p>Tests are used to describe features as code and make sure they follow the intended design.</p>
+<p>This happens regardless of whether a team follows agile methods and talks about <em>epics</em> and <em>user stories</em> instead of features. These are just tools to help decide which features the software should have and how to prioritise building them.</p>
+<h3>The Problem</h3>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/i/k5f1bmonht2jzmh97go7.png" alt="The Problem"> </p>
+<p>In a small team of up to 5-8 people working on the same project, it&#39;s still relatively easy to keep track of all features and come together to make decisions on software design.</p>
+<p>This is no longer the case when you scale to multiple teams working on the same software.</p>
+<p>Questions like these become increasingly harder to answer:</p>
+<ul>
+<li>Which team should be responsible for this feature?</li>
+<li>Can I change this feature without breaking other parts of the software?</li>
+<li>How was this feature intended to be used?</li>
+<li>Could this feature I&#39;m building also be useful to other teams?</li>
+</ul>
+<h3>Technical Debt</h3>
+<p>As a result, software teams easily get into situations where the quality of the software starts to suffer; ultimately leading to unmotivated and poorly performing teams having to constantly deal with symptoms of technical debt:</p>
+<ul>
+<li>Inconsistent APIs, bad design</li>
+<li>Features overlapping in functionality</li>
+<li>Tightly coupled features that are hard to extend without breaking things</li>
+<li>Having to look into implementation to understand what each piece does</li>
+<li>&quot;That one thing only Sam knows about&quot;</li>
+</ul>
+<p>How do we fix the problem of multiple teams and individuals collaborating on the same software?</p>
+<h3>Software Architecture</h3>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/i/4atfby7w634t1yvdeks5.png" alt="Software Architecture"> </p>
+<p>This is the point we start taking the idea of software architecture seriously. Maybe even hire some people with <em>Architect</em> in their job title to solve the problem.</p>
+<p>Software architecture on the surface is about designing and organising the pieces that make up software to make it easier to understand and keep developing.</p>
+<p>For our purposes, I would argue it&#39;s also about helping teams collaborate and organise their codebases by providing a common language and a set of abstractions to communicate about the design of the system.</p>
+<p>Here are a few popular architectural patterns a software architect may suggest to help design your software:</p>
+<ul>
+<li><a href="https://dev.to/microtica/the-concept-of-domain-driven-design-explained-1ccn">DDD (Domain Driven Design)</a></li>
+<li><a href="https://medium.com/@shivendraodean/software-architecture-the-onion-architecture-1b235bec1dec">Onion Architecture</a></li>
+<li><a href="https://www.ibm.com/cloud/learn/soa">SOA (Service Oriented Architecture)</a></li>
+<li><a href="https://dev.to/microtica/everything-you-need-to-know-to-get-started-with-microservices-5243">Microservices</a></li>
+<li><a href="https://dev.to/heroku/best-practices-for-event-driven-microservice-architecture-2lh7">Event-Driven Architecture</a></li>
+</ul>
+<p>One thing all these patterns have in common is they attempt to abstract the software into a set of smaller, encapsulated units of software.</p>
+<p>Most of the units expose an API. An interface to allow other parts of the software to interact with it.</p>
+<h3>API as a Design Tool</h3>
+<p>So it turns out thinking about APIs is pretty important for software architecture.</p>
+<p>I would go as far as to say the majority of all software in existence is there to provide APIs for other pieces of software. Think software libraries, OOP interfaces, operating systems: software meant to be used by other software with APIs.</p>
+<p>In fact APIs are so important, I&#39;d argue API design is the single most useful design tool for teams collaborating on software design.</p>
+<p>Not UML diagrams.</p>
+<p>Not entity relationship diagrams.</p>
+<p>Not abstract architecture diagrams.</p>
+<p>API Design.</p>
+<h3>Why API Design?</h3>
+<p>If software architecture is about building elaborate systems of features provided by small encapsulated units of software, and those features are mainly manifested as APIs, how can we possibly avoid talking about API design as the centerpiece of the whole design?</p>
+<p>That would be like designing a public transportation system without looking at the connections between lines.</p>
+<p>Or designing a factory line without looking at how the materials move between the machines.</p>
+<p>I imagine those things would be very difficult to do.</p>
+<h3>API First Design</h3>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/i/2qx1syyoa8eofg7ocmxi.png" alt="API First Design"> </p>
+<p>Next time your team starts working on a feature, after you&#39;ve drafted a design for how the feature might look like to the user, design the APIs needed for that feature.</p>
+<p>Try designing the APIs with code. Make sure not to start implementing it yet. Use types, interfaces or technical API definition standards.</p>
+<p>Here are some popular standard tools for designing HTTP APIs:</p>
+<ul>
+<li><a href="https://www.postman.com/api-design/">Postman</a></li>
+<li><a href="https://graphql.org/learn/schema/">GraphQL Type Language</a></li>
+<li><a href="http://spec.openapis.org/oas/v3.0.3">OpenAPI Specification</a></li>
+<li><a href="https://www.asyncapi.com/">AsyncAPI Specification</a></li>
+</ul>
+<p>Share the API design. Include it as part of a proposal or RFC (request-for-comments). Provide examples for how the API would be used. Invite colleagues to give feedback and make suggestions (PRs) to improve the design. </p>
+<p>Once the comments stop coming in, run with it. This API will now become part of the beautiful software you&#39;re building together.</p>
+<h3>Efficiency</h3>
+<p>In addition to producing higher quality software, teams who focus on API design first are able to work more efficiently by parallelising work around the API contract.</p>
+<p>Because APIs work like contracts, they can have a future start date. A promise that this API will exist in the software at a later date.</p>
+<p>Even before a team starts implementing an API, other teams can already start building new software depending on the technical definition of the API.</p>
+<p>Mocks can be used to test the software even before a single line of code has been written to implement the API. </p>
+<p>Changes to the API can be proposed with concrete PRs. This is a lot easier while the API only exists as a design with no implementation.</p>
+<p>This is a really powerful way to parallelise work and avoid blocking dependencies between teams.</p>
+<h3>Example of an API First Workflow</h3>
+<p>Let&#39;s say we have two product teams working on an Ecommerce app, both with their own backlogs and user stories they wish to deliver.</p>
+<p><strong>Team Alpha</strong> plans to add a price notification feature that lets users know when pricing has changed on products they saved in a watchlist.</p>
+<p><strong>Team Omega</strong> plans to add a new improved search feature that provides product recommendations for users based on their purchase history and products they have saved in a watchlist.</p>
+<p>Both teams need a watchlist feature to implement their end-to-end user stories.</p>
+<h3>A Story of Collaboration</h3>
+<p>Team Alpha starts working on their price notification story by producing some UI wireframes alongside API designs as OpenAPI definition files in a git repository.</p>
+<p>The designs are included as part of a company internal RFC document describing the solution for price notifications.</p>
+<p>Omega team views the RFC and notices that Alpha&#39;s proposal includes the watchlist feature they need but the Watchlist API is missing a way to fetch all saved products for a user, a feature needed to come up with the recommendations for Omega&#39;s search feature.</p>
+<p>Omega then makes an adjustment in the OpenAPI definition adding the missing feature to the API design and submits a PR, which gets merged after review from Alpha.</p>
+<p>As both teams are happy with Alpha&#39;s proposed design, Alpha gets to work on their price notification feature.</p>
+<p>Meanwhile Omega submits their own RFC proposal with designs for the improved search feature using the Watchlist API definition as part of the solution. After some collaborative iteration on the RFC document, Omega is ready to continue with their own feature.</p>
+<p>Both teams work on their respective features in parallel, mocking the Watchlist API to test out their features.</p>
+<p>Later, Alpha informs Omega that the Watchlist API has been implemented as part of their sprint. Omega tests the newly implemented API and is happy to see their search feature now working as designed.</p>
+<p>Using this workflow, both teams efficiently collaborated on the design of the software using RFC documents to describe their solutions, including technical API designs to enable working with version control and Pull Requests, both teams working in parallel to complete their user stories.</p>
+<h3>Platform of Features</h3>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/i/tjlhl300h0loun1mf7aj.png" alt="Platform of Features"> </p>
+<p>As teams focus on APIs first, they end up building up a platform of features.</p>
+<p>Focusing on well designed APIs to build end-to-end features, the APIs will implement platform features that can be leveraged by other teams working on other parts of the software.</p>
+<p>Smart companies will start building up a Developer Portal, a central repository for the technical API definitions and start providing tools and well written documentation to consume platform APIs.  Maybe even release language-specific SDKs to make consuming versioned APIs as easy as installing software packages.</p>
+<p>At this stage you have a level 4 API First engineering organisation (see: <a href="https://dev.to/epilot/4-levels-of-api-adoption-2i0p">4 Levels of API adoption</a>) with teams able to iterate fast by collaborating on the software design on a detailed level, constantly expanding the platform with new APIs and tools to build and consume them.</p>
+<p>This is a good place to be. 💙</p>
+
+    </article>
+
+    <hr class="feed-hero__divider" />
+    <p class="feed-hero__subscribe-label">
+      Subscribe to get future posts via email (or grab the <a href="/feed/rss.xml">RSS feed</a>)
+    </p>
+    
+    <section class="subscribe subscribe--compact" id="subscribe">
+      
+      <form action="https://buttondown.com/api/emails/embed-subscribe/viljami"
+        method="post" class="subscribe__form">
+        <input type="email" name="email" placeholder="Type your email&hellip;" required aria-label="Email address" />
+        <button type="submit" class="btn btn-primary">Subscribe</button>
+      </form>
+    </section>
+  </main>
+
+  <footer class="impressum">
+    <p><a href="/feed/">&larr; All posts</a></p>
+  </footer>
+
+</body>
+
+</html>

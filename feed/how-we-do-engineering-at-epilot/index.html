@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>How we do engineering @ epilot — Viljami Kuosmanen</title>
+  <meta name="description" content="Ever since open-sourcing our core Engineering Principles back in January 2021, I regularly get asked..." />
+  <meta name="theme-color" content="#0e0f12" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#fafaf7" media="(prefers-color-scheme: light)" />
+  <meta property="og:title" content="How we do engineering @ epilot — Viljami Kuosmanen" />
+  <meta property="og:description" content="Ever since open-sourcing our core Engineering Principles back in January 2021, I regularly get asked..." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://viljami.io/feed/how-we-do-engineering-at-epilot/" />
+  <link rel="canonical" href="https://viljami.io/feed/how-we-do-engineering-at-epilot/" />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="alternate icon" href="/assets/favicon.png" type="image/png" />
+  <link rel="alternate" type="application/rss+xml" title="Viljami Kuosmanen &mdash; Feed" href="https://viljami.io/feed/rss.xml" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+
+  <main class="card feed-card post">
+    <header class="hero">
+      <p class="eyebrow"><a href="/feed/">&larr; Viljami.io / Feed</a></p>
+      <h1>How we do engineering @ epilot</h1>
+      <p class="title">January 22, 2023</p>
+    </header>
+
+    <article class="post__body">
+<p>Ever since open-sourcing our core <a href="https://github.com/epilot-dev/engineering-principles">Engineering Principles</a> back in January 2021, I regularly get asked by candidates how and if the principles really work in practice at epilot.</p>
+<p>In this post, I&#39;ll attempt to give a glimpse of concrete tools and practices we use in our product team to give an idea of how we apply our principles and what the engineering culture really looks like from the inside.</p>
+<h2>Team Structure</h2>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/42k3bz1nb6ycc0xr1pxk.jpg" alt="Engineering team group picture"></p>
+<p>At time of writing, the epilot engineering team consists of 25 full-time remote software engineers organized into 6 squads, each with its own Product Manager and a shared design team of 4 talented product &amp; UX designers.</p>
+<p>Each squad is led by an engineer team lead, principally responsible for the team&#39;s delivery and engineer wellbeing.</p>
+<p>The product leadership team is responsible for communicating our product strategy and maintains a <a href="https://medium.com/the-creative-strategist/why-now-next-later-is-one-of-the-best-frameworks-for-roadmapping-4d547a2f2692">Now-Next-Later</a> roadmap, but ultimately it&#39;s the squads that make all delivery decisions.</p>
+<p>Squads are formed around specific business domains within the epilot 360 platform, architected around <a href="https://domaindrivendesign.org/ddd-domain-driven-design/">Domain Driven Design</a> and micro-ish services both in the backend and frontend.</p>
+<h2>Show, Don&#39;t Tell</h2>
+<p>We value real concrete working software, not roadmaps and fancy presentations.</p>
+<p>Engineers showcase features in a weekly all-hands Product Demo session: a company-wide celebration and ruthless feedback session. 🎉</p>
+<p>Features being demoed are deployed to production but are usually hidden behind a <a href="https://www.getunleash.io/">Feature Toggle</a>, giving demo participants a chance to test and give feedback on features before release.</p>
+<p>Most squads use a Kanban-style flow with a weekly planning cycle, but opt to showcase their progress every 2 weeks, with some squads hosting extra demos called &quot;Open Houses&quot; on off-weeks.</p>
+<p>The engineering team also hosts an internal bi-weekly &quot;Tech Exchange&quot; to wind down with a beer, but also present and demo cool technical things.</p>
+<h2>API-first &amp; serverless</h2>
+<p>The epilot backend is built as serverless microservices written mostly in Typescript, leveraging services such as AWS Lambda, Step Functions, EventBridge, API Gateway and AppSync.</p>
+<p>DynamoDB is the most popular database solution enhanced by managed data stores such as Elasticsearch Cloud, Aurora Serverless and Redshift Serverless.</p>
+<p>Our backend is pretty event-driven, with heavy use of EventBridge, SQS and Step Functions to implement asynchronous business logic.</p>
+<p><a href="https://docs.epilot.io/docs/architecture/overview"><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/xgjoo96jraez8ar3a8re.png" alt="epilot tech stack"></a></p>
+<p>Our frontend application consists of microfrontends written in React and Svelte orchestrated by the <a href="https://single-spa.js.org/">single-spa</a> framework.</p>
+<p>The epilot frontend is entirely built on the same APIs we expose to our customers and technical partners via our open-source <a href="https://github.com/epilot-dev/sdk-js">SDK</a> and public documentation.</p>
+<p>We like open standards, so our APIs are defined using common machine-readable specs like GraphQL and OpenAPI.</p>
+<p>We find the domain-driven architecture approach an efficient way to organize our teams to act independently while collaborating on software design with an <a href="https://dev.to/epilot/why-we-design-apis-first-e85">API-first</a> approach.</p>
+<p>Organizing our codebase with microservices helps our fully remote engineering team focus on delivery and minimize <a href="https://en.wiktionary.org/wiki/bikeshedding">bikeshedding</a> over non-critical engineering decisions.</p>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/wx4e95wjngxcf7im0z0f.png" alt="Microfrontends"></p>
+<h2>Freedom and Responsibility</h2>
+<p>Ok, I freely admit we stole this one from the <a href="https://jobs.netflix.com/culture">Netflix culture deck</a>. Shoulders of giants and so on. ♥</p>
+<p>At epilot, every hire is trusted and treated as an adult from day one. We only hire smart people who we can trust and aren&#39;t afraid to terminate a relationship if that trust is broken.</p>
+<p>We expect engineers to operate by principles and think strategically to benefit our customers and our business. (Max-the-MRR)</p>
+<p>We intentionally make it very difficult to create company-wide policies to control which tools to use, what employees should be allowed to do and how they should organize their daily work.</p>
+<p>It should be hard to introduce new processes but easy to get rid of existing bad ones.</p>
+<p>The exception to this rule is security.</p>
+<p>We encourage team members to challenge the status quo with RFCs proposing ways to improve the product and our ways of working.</p>
+<h2>RFCs - Solutions Over Problems</h2>
+<p>Among other things, RFCs written by engineers have so far led us to adopt continuous deployment, harden security, establish new teams, and even <a href="https://dev.to/epilot/my-first-year-as-epilots-head-of-engineering-killing-the-legacy-monolith-25c2#:~:text=The%20radical%20360%20plan">rewrite the entire product in a different tech stack</a>.</p>
+<p>These are often simple documents that start out by just describing a problem and expressing a wish or an idea to solve it.</p>
+<p><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/05wyg0jyd30oruzonlxr.png" alt="RFC"></p>
+<p>RFCs at epilot have no official approval process. We expect the author to champion their proposal by garnering relevant feedback from peers and stakeholders, and then make an informed decision on how to proceed.</p>
+<p>In most cases, the RFC author leads by example and implements the proposal themselves, usually just within her squad at first.</p>
+<p>Good ideas spread and are adopted through all teams, not by mandate from above, but by actually improving the quality of our work.</p>
+<blockquote>
+<p><strong>Edit:</strong> A total of 192 RFCs have been published in our Confluence since they were introduced 2 years ago. 🔥</p>
+</blockquote>
+<h2>Every Week is Quality Week</h2>
+<p>The name of this principle came about after a group of engineers expressed concern about technical debt in their project due to pressure to deliver against deadlines.</p>
+<p>At the time, it was already an established practice to <a href="https://github.com/anttiviljami/romero-programming-principles#principle-6-fix-bugs-immediately">fix bugs immediately</a> and treat all types of bugs as critical, but many engineers still felt that they couldn&#39;t go against the wishes of product managers to follow the practice.</p>
+<p>It was proposed to have a &quot;quality week&quot; at the end of every quarter to give engineers time to focus on quality topics.</p>
+<p>As the quarter came to a close, we announced the quality week with instructions to all squads to focus solely on bugs, technical debt and other quality improvements they felt were important.</p>
+<p>During the quality week, our engineers were extremely motivated to fix long-time issues that had affected our customers.</p>
+<p>We made real, significant progress that week and everyone could see it.</p>
+<p>On Monday following the first quality week, we opened <a href="https://github.com/epilot-dev/engineering-principles/pull/8">this PR</a>, making an announcement that every week from now on would be quality week:</p>
+<p><a href="https://github.com/epilot-dev/engineering-principles/pull/8"><img src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/mb6wkx3bdlfzoqucdb8d.png" alt="Every Week is Quality Week PR"></a></p>
+<p>It worked. We&#39;re still starting a new quality week every Monday.</p>
+<h2>No-Ops &amp; Continuous Deployment</h2>
+<p>At epilot you will find a distinct lack of epilot-specific shared tooling. We actively avoid building our own tools and standardizing configurations and instead encourage using open-source tools like AWS CDK, <a href="https://github.com/awslabs/aws-lambda-powertools-typescript">lambda-powertools</a> and <a href="https://single-spa.js.org">single-spa</a> to build our product.</p>
+<p>We don&#39;t have dedicated DevOps engineers or a platform team to build custom tools and pipelines or run k8s clusters.</p>
+<p>We expect squads to independently automate testing, deployment and monitoring of their features to minimize the need for manual operational tasks.</p>
+<p>Engineers really get to pick any tools they like to do their job, as long as they weigh tech decisions against our principles.</p>
+<p>I sometimes get engineers pushing me to leverage my position as head of department to standardize tech choices across the entire engineering team, but so far the approach of giving teams radical freedom has yielded organic adoption of best practices and tools where needed anyways.</p>
+<p>Without extra push, all teams have converged to using the same GitLab CI templates, connecting up with <a href="https://docs.datadoghq.com/continuous_integration/">Datadog</a> to continuously deploy code with synthetic browser tests integrated into the pipeline to make sure we catch problems before they get to production.</p>
+<p>The whole team also uses Datadog (another RFC) as the central observability solution to know what&#39;s happening in our platform at all times.</p>
+<p>When stuff goes wrong, engineers owning the feature jump on a Slack huddle using Datadog&#39;s incident management feature to coordinate the response, cleanup and write a post-mortem.</p>
+<h2>Why principles matter</h2>
+<p>When I joined epilot, I made it my personal mission to build an engineering culture that I would personally want to join and be part of.</p>
+<p>To me, the <a href="https://github.com/epilot-dev/engineering-principles">engineering principles</a> are like a founding document; a source code or DNA of how to build a great engineering team.</p>
+<p>I&#39;m proud of how far we&#39;ve come, but there&#39;s still lots to learn and improve as we grow and mature as a product team.</p>
+<p>I fully expect that in 2 years, writing this blog post would look very different as the industry moves forward with new tools and practices. I hope that these principles will stick.</p>
+<p>If the topics in this post resonated with you, make sure to check out our <a href="https://docs.epilot.io/">dev docs</a> and see our <a href="https://epilot.cloud/en/career-jobs/">open positions</a>!</p>
+
+    </article>
+
+    <hr class="feed-hero__divider" />
+    <p class="feed-hero__subscribe-label">
+      Subscribe to get future posts via email (or grab the <a href="/feed/rss.xml">RSS feed</a>)
+    </p>
+    
+    <section class="subscribe subscribe--compact" id="subscribe">
+      
+      <form action="https://buttondown.com/api/emails/embed-subscribe/viljami"
+        method="post" class="subscribe__form">
+        <input type="email" name="email" placeholder="Type your email&hellip;" required aria-label="Email address" />
+        <button type="submit" class="btn btn-primary">Subscribe</button>
+      </form>
+    </section>
+  </main>
+
+  <footer class="impressum">
+    <p><a href="/feed/">&larr; All posts</a></p>
+  </footer>
+
+</body>
+
+</html>
