@@ -83,14 +83,69 @@ a:hover {
    ============================================================ */
 
 .card {
+  --card-pad: clamp(1.75rem, 4vw, 3rem);
   position: relative;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: clamp(1.75rem, 4vw, 3rem);
+  padding: var(--card-pad);
   max-width: 640px;
   width: 100%;
+}
+
+/* ============================================================
+   Stage photo (full-bleed card cover)
+   ============================================================ */
+
+.stage {
+  position: relative;
+  margin: calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad)) var(--card-pad);
+  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  background: #111;
+}
+
+.stage picture,
+.stage img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.stage figcaption {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  padding: 2.5rem 1rem 0.75rem;
+  background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.55));
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+}
+
+.stage figcaption a {
+  color: inherit;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.5);
+  pointer-events: auto;
+}
+
+.stage figcaption a:hover {
+  color: #ffffff;
+  border-color: #ffffff;
+}
+
+@media (max-width: 32rem) {
+  .stage figcaption {
+    font-size: 0.66rem;
+    padding: 2rem 0.85rem 0.6rem;
+  }
 }
 
 .hero {
