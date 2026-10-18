@@ -24,27 +24,30 @@
   <link rel="alternate icon" href="/assets/favicon.png" type="image/png" />
   <link rel="alternate" type="application/rss+xml" title="Viljami Kuosmanen &mdash; Feed"
     href="https://viljami.io/feed/rss.xml" />
-  <link rel="stylesheet" href="/style.css?v=2026-10-17" />
+  <link rel="stylesheet" href="/style.css?v=2026-10-18" />
 </head>
 
 <body>
   <main class="card">
     <figure class="stage">
-      <picture>
-        <source media="(max-width: 32rem)"
-          srcset="/assets/sdlcai-2026-tight-640.webp 640w, /assets/sdlcai-2026-tight-1200.webp 1200w"
-          sizes="100vw" width="1200" height="960" />
-        <img src="/assets/sdlcai-2026-1280.webp"
-          srcset="/assets/sdlcai-2026-768.webp 768w, /assets/sdlcai-2026-1280.webp 1280w"
-          sizes="(max-width: 44rem) 100vw, 640px" width="1280" height="853" fetchpriority="high"
-          alt="Viljami Kuosmanen on stage at SDLCAI 2026, giving the talk “I Let Non-Engineers Vibe-Code Our Production Codebase”" />
-      </picture>
+      <a class="stage__open" href="/assets/sdlcai-2026-2560.webp" onclick="openLightbox(event)"
+        aria-label="View the photo full screen">
+        <picture>
+          <source media="(max-width: 32rem)"
+            srcset="/assets/sdlcai-2026-tight-640.webp 640w, /assets/sdlcai-2026-tight-1200.webp 1200w"
+            sizes="100vw" width="1200" height="960" />
+          <img src="/assets/sdlcai-2026-1280.webp"
+            srcset="/assets/sdlcai-2026-768.webp 768w, /assets/sdlcai-2026-1280.webp 1280w"
+            sizes="(max-width: 44rem) 100vw, 640px" width="1280" height="853" fetchpriority="high"
+            alt="Viljami Kuosmanen on stage at SDLCAI 2026, giving the talk “I Let Non-Engineers Vibe-Code Our Production Codebase”" />
+        </picture>
+      </a>
       <figcaption>
-        <span><a href="https://www.sdlcai.org/speakers/#viljami-kuosmanen" target="_blank" rel="noopener"
+        <span><a href="https://www.sdlcai.org/2026/speakers/#viljami-kuosmanen" target="_blank" rel="noopener"
             title="I Let Non-Engineers Vibe-Code Our Production Codebase">SDLCAI 2026</a> · Espoo ·
           <a href="https://www.sdlcai.org/media/talks/non-engineers-vibe-code-production/404574e7-178f-48ea-bca5-02245c74ab6a.pdf"
             target="_blank" rel="noopener">slides</a></span>
-        <span>Photo: <a href="https://www.sdlcai.org/photos/" target="_blank" rel="noopener">Juho Vepsäläinen</a> ·
+        <span>Photo: <a href="https://www.sdlcai.org/2026/photos/" target="_blank" rel="noopener">Juho Vepsäläinen</a> ·
           <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener license">CC BY 4.0</a></span>
       </figcaption>
     </figure>
@@ -193,6 +196,19 @@
     <p class="paygate__footer">Always free. No email or personal data collected.</p>
   </dialog>
 
+  <dialog class="lightbox" aria-label="Viljami Kuosmanen on stage at SDLCAI 2026">
+    <button class="lightbox__close" type="button" aria-label="Close" onclick="closeLightbox()">✕</button>
+    <img src="/assets/sdlcai-2026-2560.webp"
+      srcset="/assets/sdlcai-2026-1280.webp 1280w, /assets/sdlcai-2026-2560.webp 2560w" sizes="100vw"
+      width="2560" height="1706" loading="lazy"
+      alt="Viljami Kuosmanen on stage at SDLCAI 2026, giving the talk “I Let Non-Engineers Vibe-Code Our Production Codebase”" />
+    <p class="lightbox__credit">
+      SDLCAI 2026 · Espoo · Photo:
+      <a href="https://www.sdlcai.org/2026/photos/" target="_blank" rel="noopener">Juho Vepsäläinen</a> ·
+      <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener license">CC BY 4.0</a>
+    </p>
+  </dialog>
+
   <script>
     const paygate = document.querySelector('dialog.paygate');
 
@@ -208,6 +224,24 @@
     paygate.addEventListener('click', (event) => {
       if (event.target === paygate) {
         paygate.close();
+      }
+    });
+
+    const lightbox = document.querySelector('dialog.lightbox');
+
+    function openLightbox(event) {
+      if (event) event.preventDefault();
+      lightbox.showModal();
+    }
+
+    function closeLightbox() {
+      lightbox.close();
+    }
+
+    // Any click closes it, except on the credit links
+    lightbox.addEventListener('click', (event) => {
+      if (!event.target.closest('a')) {
+        lightbox.close();
       }
     });
   </script>

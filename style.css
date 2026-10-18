@@ -114,6 +114,25 @@ a:hover {
   height: auto;
 }
 
+.stage__open {
+  display: block;
+  border-bottom: 0;
+  cursor: zoom-in;
+}
+
+.stage__open img {
+  transition: transform 0.4s ease;
+}
+
+.stage__open:hover img {
+  transform: scale(1.015);
+}
+
+.stage__open:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
+}
+
 .stage figcaption {
   position: absolute;
   inset: auto 0 0 0;
@@ -651,6 +670,107 @@ dialog.paygate::backdrop {
   }
   dialog.paygate {
     padding: 1.25rem;
+  }
+}
+
+/* ============================================================
+   Photo lightbox
+   ============================================================ */
+
+dialog.lightbox {
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-out;
+}
+
+dialog.lightbox[open] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: lightbox-in 0.2s ease;
+}
+
+dialog.lightbox::backdrop {
+  background: rgba(0, 0, 0, 0.96);
+}
+
+dialog.lightbox img {
+  display: block;
+  max-width: 100vw;
+  max-height: 100dvh;
+  width: auto;
+  height: auto;
+}
+
+.lightbox__close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.lightbox__close:hover {
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.lightbox__credit {
+  position: absolute;
+  inset: auto 0 0 0;
+  margin: 0;
+  padding: 2rem 1rem 0.85rem;
+  background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.6));
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.lightbox__credit a {
+  color: inherit;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.5);
+}
+
+.lightbox__credit a:hover {
+  color: #ffffff;
+  border-color: #ffffff;
+}
+
+body:has(dialog.lightbox[open]) {
+  overflow: hidden;
+}
+
+@keyframes lightbox-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage__open img {
+    transition: none;
+  }
+  .stage__open:hover img {
+    transform: none;
+  }
+  dialog.lightbox[open] {
+    animation: none;
   }
 }
 
