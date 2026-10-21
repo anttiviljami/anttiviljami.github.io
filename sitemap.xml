@@ -2,11 +2,15 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://viljami.io/</loc>
-    <lastmod>2026-08-18</lastmod>
+    <lastmod>2026-10-21</lastmod>
+  </url>
+  <url>
+    <loc>https://viljami.io/open-source/</loc>
+    <lastmod>2026-10-21</lastmod>
   </url>
   <url>
     <loc>https://viljami.io/impressum.html</loc>
-    <lastmod>2026-05-17</lastmod>
+    <lastmod>2026-10-21</lastmod>
   </url>
   <url>
     <loc>https://viljami.io/feed/</loc>
