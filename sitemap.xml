@@ -2,19 +2,19 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://viljami.io/</loc>
-    <lastmod>2026-10-21</lastmod>
+    <lastmod>2026-10-24</lastmod>
   </url>
   <url>
     <loc>https://viljami.io/open-source/</loc>
-    <lastmod>2026-10-21</lastmod>
+    <lastmod>2026-10-24</lastmod>
   </url>
   <url>
     <loc>https://viljami.io/impressum.html</loc>
-    <lastmod>2026-10-21</lastmod>
+    <lastmod>2026-10-24</lastmod>
   </url>
   <url>
     <loc>https://viljami.io/feed/</loc>
-    <lastmod>2026-08-19</lastmod>
+    <lastmod>2026-10-24</lastmod>
   </url>
   <url>
     <loc>https://viljami.io/feed/testing-react-with-jest-and-openapi-mocks/</loc>
@@ -87,5 +87,9 @@
   <url>
     <loc>https://viljami.io/feed/we-locked-ourselves-out-of-production/</loc>
     <lastmod>2026-08-18</lastmod>
+  </url>
+  <url>
+    <loc>https://viljami.io/feed/non-engineers-vibe-code-production-sdlcai/</loc>
+    <lastmod>2026-10-24</lastmod>
   </url>
 </urlset>

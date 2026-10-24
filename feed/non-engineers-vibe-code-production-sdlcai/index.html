@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>I Let Non-Engineers Vibe-Code Our Production Codebase. Eight Months Later. — Viljami Kuosmanen</title>
+  <meta name="description" content="An update to my April post, and the SDLCAI talk on video: 7831 agent PRs, 4582 in production, what broke and the one rule that fixed it." />
+  <meta name="theme-color" content="#0e0f12" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#fafaf7" media="(prefers-color-scheme: light)" />
+  <meta property="og:title" content="I Let Non-Engineers Vibe-Code Our Production Codebase. Eight Months Later. — Viljami Kuosmanen" />
+  <meta property="og:description" content="An update to my April post, and the SDLCAI talk on video: 7831 agent PRs, 4582 in production, what broke and the one rule that fixed it." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://viljami.io/feed/non-engineers-vibe-code-production-sdlcai/" />
+  
+  <link rel="canonical" href="https://viljami.io/feed/non-engineers-vibe-code-production-sdlcai/" />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="alternate icon" href="/assets/favicon.png" type="image/png" />
+  <link rel="alternate" type="application/rss+xml" title="Viljami Kuosmanen &mdash; Feed" href="https://viljami.io/feed/rss.xml" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+
+  <main class="card feed-card post">
+    <header class="hero">
+      <a class="post__byline" href="/feed/">
+        <img class="post__byline-avatar" src="/assets/viljami.jpg" alt="Viljami Kuosmanen" width="32" height="32" />
+        <span class="post__byline-name">Viljami Kuosmanen</span>
+      </a>
+      <h1>I Let Non-Engineers Vibe-Code Our Production Codebase. Eight Months Later.</h1>
+      <p class="title">October 24, 2026</p>
+    </header>
+
+    <article class="post__body">
+<p>In April I wrote about opening our codebase to the entire company. 629 merged PRs in 60 days, 40 of them from 11 non-engineers. The question I got most afterwards: what happens once the honeymoon is over?</p>
+<p>On 13 October I answered it on stage at the SDLCAI seminar in Espoo. The talk is called &quot;I Let Non-Engineers Vibe-Code Our Production Codebase&quot;. Here&#39;s the video.</p>
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;margin:1.5rem 0">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;border:0" src="https://www.youtube-nocookie.com/embed/SL6QypO5BxA" title="I Let Non-Engineers Vibe-Code Our Production Codebase, SDLCAI 2026" loading="lazy" allowfullscreen></iframe>
+</div><p><a href="https://www.youtube.com/watch?v=SL6QypO5BxA">Watch on YouTube</a> · <a href="https://sdlcai.org/media/talks/non-engineers-vibe-code-production/404574e7-178f-48ea-bca5-02245c74ab6a.pdf">Slides (PDF)</a> · <a href="https://www.youtube.com/watch?v=q-4H3JMNDE4">Q&amp;A with Jussi Hacklin and Sini Tistelgrén</a></p>
+<h2>The numbers, February to September</h2>
+<ul>
+<li>7831 pull requests opened by agents</li>
+<li>4582 merged to production</li>
+<li>807 driven by non-engineers</li>
+<li>16 non-engineers still shipping code every day</li>
+</ul>
+<p>Merged agent PRs per month grew 3,4× from March to September. It never plateaued.</p>
+<p>Most of the 807 are not translation fixes, which is what I expected. Designers now send a preview link instead of a Figma file. Product managers fix the annoying thing they&#39;ve been filing tickets about for years. Customer success ships the change in ten minutes that would have waited six months in a backlog.</p>
+<h2>What stuck since April</h2>
+<p><strong>The agent lives in Slack.</strong> You tag it like a colleague, in a public channel, and it comes back with a pull request and a preview link. Adoption spreads by watching. PMs watch engineers, engineers watch each other. The vendor matters much less than the pattern. When our Slack integration got repriced, one of our engineers, Suresh, built <a href="https://leidang.dev">Leidang</a>: our own runtime for coding agents, agent-agnostic, Slack built in. Nobody noticed the difference. It&#39;s going open source under Apache-2.0, and it&#39;s already listed on <a href="https://opensource.epilot.cloud">opensource.epilot.cloud</a> with the rest of what we share.</p>
+<p><strong>If you can&#39;t see the change, you can&#39;t own it.</strong> Every PR gets a preview link. That&#39;s what made it work for people who will never install an IDE.</p>
+<h2>What broke</h2>
+<p>A few weeks in, an agent working for a non-engineer found a way to deploy through our CI pipeline. It never reached production. Our security monitoring caught it. We got lucky.</p>
+<p>Same day we landed one rule that everybody can remember: agents and non-engineers open as many pull requests as they want. Engineers review and merge. Same bar as any other change.</p>
+<p>You&#39;d expect that to slow things down. Non-engineers merging their own PRs went from 36 a month to 1, by design, and the number of merged agent PRs kept growing. Guardrails build trust, and trust drives adoption.</p>
+<p>The bigger lesson was about engineers. A default AWS profile can&#39;t tell you apart from your agent, so we cut off all laptop access to production AWS. I wrote that up <a href="/feed/we-locked-ourselves-out-of-production/">here</a>.</p>
+<h2>The honest list</h2>
+<ul>
+<li>Review is the bottleneck. Writing code is cheap, understanding every change is not. We use AI on that side too.</li>
+<li>Not every PR should ship. About two thirds of non-engineer PRs get merged, the agent average is 59%. A closed PR costs minutes. That&#39;s the filter working.</li>
+<li>Agents are confidently wrong. People learn to push back, and non-engineers pick that up fast.</li>
+<li>Engineers over-trust too. My favourite quote of the year, from a PM: &quot;Unfortunately engineers also just trust whatever AI gives them, so we have some weird translations.&quot;</li>
+</ul>
+<h2>If you want to do this</h2>
+<ol>
+<li>Hire the coworker. Put the agent in Slack and tag it.</li>
+<li>Open the codebase, with preview links on every PR.</li>
+<li>Guardrails first. Lock merge permissions before you open access, not after.</li>
+<li>Write it down. Your context is the bottleneck, not the model.</li>
+</ol>
+<p>The people closest to your customers can change your software now. Are you letting them?</p>
+<p>Happy to compare notes with anyone wrestling with the same questions. The <a href="/feed/our-entire-company-ships-code-now/">original April post</a> has the full setup.</p>
+
+    </article>
+
+    <hr class="feed-hero__divider" />
+    <p class="feed-hero__subscribe-label">
+      Subscribe to get future posts via email (or grab the <a href="/feed/rss.xml">RSS feed</a>)
+    </p>
+    
+    <section class="subscribe subscribe--compact" id="subscribe">
+      
+      <form action="https://buttondown.com/api/emails/embed-subscribe/viljami"
+        method="post" class="subscribe__form">
+        <input type="email" name="email" placeholder="Type your email&hellip;" required aria-label="Email address" />
+        <button type="submit" class="btn btn-primary">Subscribe</button>
+      </form>
+    </section>
+  </main>
+
+  <footer class="impressum">
+    <p><a href="/feed/">&larr; All posts</a></p>
+  </footer>
+
+</body>
+
+</html>
