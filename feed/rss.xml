@@ -4,12 +4,70 @@
         <title>Viljami Kuosmanen — Writing</title>
         <link>https://viljami.io/feed/</link>
         <description>Essays on product engineering, AI-augmented software teams, and running engineering orgs.</description>
-        <lastBuildDate>Thu, 05 Nov 2026 09:03:46 GMT</lastBuildDate>
+        <lastBuildDate>Fri, 20 Nov 2026 09:14:19 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <language>en</language>
         <copyright>All rights reserved 2026, Viljami Kuosmanen</copyright>
         <atom:link href="https://viljami.io/feed/rss.xml" rel="self" type="application/rss+xml"/>
+        <item>
+            <title><![CDATA[OpenAPI Stack joins the GitHub Secure Open Source Fund]]></title>
+            <link>https://viljami.io/feed/openapi-stack-joins-the-github-secure-open-source-fund/</link>
+            <guid isPermaLink="false">https://viljami.io/feed/openapi-stack-joins-the-github-secure-open-source-fund/</guid>
+            <pubDate>Fri, 20 Nov 2026 00:00:00 GMT</pubDate>
+            <description><![CDATA[Three weeks with GitHub Security Lab: 1005 Dependabot alerts down to 0, six security advisories patched, a written threat model and CodeQL packs for your own code.]]></description>
+            <content:encoded><![CDATA[<p>openapi-stack is a set of open source libraries for building and consuming REST APIs straight from an OpenAPI definition: openapi-backend, openapi-client-axios, openapicmd and a few smaller ones. They&#39;re <a href="https://openapistack.co/users/">used by teams at</a> Microsoft, GitHub, IBM, Red Hat, SAP, AWS, Notion, Intel and Fastly. Those are only the ones I can see in public. Most of the usage is on the critical path of APIs inside products and companies I&#39;ll never see.</p>
+<p>I started it in 2018 and still do most of the maintaining, with engineering time from <a href="https://opensource.epilot.cloud">epilot</a>, where the libraries run in production. That works fine for features. For issues that didn&#39;t affect epilot, the maintenance ran on whatever time was left.</p>
+<p>This autumn openapi-stack was part of Session 5 of the <a href="https://github.com/open-source/github-secure-open-source-fund">GitHub Secure Open Source Fund</a>: three weeks with GitHub Security Lab and a cohort of other maintainers, doing nothing but security. This week GitHub <a href="https://github.blog/open-source/maintainers/maintainers-dont-need-more-ai-bug-reports-they-need-fixes/">named the alumni</a> in a post titled &quot;Maintainers don&#39;t need more AI bug reports. They need fixes.&quot;</p>
+<h2>TL;DR;</h2>
+<ul>
+<li>Dependabot alerts: 1005 → 0</li>
+<li>Six security advisories published and patched: five in <a href="https://github.com/openapistack/openapi-backend/security/advisories">openapi-backend</a>, one in <a href="https://github.com/openapistack/openapi-client-axios/security/advisories">openapi-client-axios</a></li>
+<li>A written <a href="https://github.com/openapistack/openapi-backend/blob/main/docs/threat-model.md">threat model</a></li>
+<li>A <a href="https://openapistack.co/docs/openapi-backend/security/">Security Best Practices</a> guide and <a href="https://github.com/openapistack/openapi-backend-codeql">CodeQL packs</a> that check your code against it</li>
+<li>An <a href="https://github.com/openapistack/openapi-backend/releases/latest">SBOM</a>, license notices, provenance and reproducible builds</li>
+<li>An honest <a href="https://github.com/openapistack/openapi-backend/blob/main/SECURITY.md">SECURITY.md</a> with an incident response plan</li>
+</ul>
+<h2>1005 alerts nobody was reading</h2>
+<p>On the first evening of the program, the security tab of openapi-backend said <strong>1005</strong> open Dependabot vulnerabilities. I had given up on that list a long time ago.</p>
+<p>Almost none of it was the library. openapi-backend has an example project per framework, each with its own lockfile, and Dependabot dutifully reported every stale dependency in every one of them.</p>
+<p>So I asked in the program Slack: &quot;Any dependabot experts here?&quot; Nine replies later the fix was obvious. The examples moved to their own branch, CI still tests every release against them, and the real updates got merged. Three days later the count was 1. Today it&#39;s 0.</p>
+<p>An alert list nobody reads protects nobody. With 1005 alerts on the tab, the one that actually mattered would have been invisible.</p>
+<h2>What does openapi-backend actually promise?</h2>
+<p>The most valuable thing I wrote in three weeks is the <a href="https://github.com/openapistack/openapi-backend/blob/main/docs/threat-model.md">threat model</a>.</p>
+<p>Before the program it lived in my head, and every security report turned into an argument about what the library is supposed to do. Reporters said vulnerability. I said documented behaviour. We were both partly right, and there was no document to settle it.</p>
+<p>Now there is. Where the trust boundary is, what the library guarantees, what it leaves to your framework and what gets reported often but isn&#39;t a bug. SECURITY.md asks reporters to name the guarantee their finding breaks. Triage becomes citing a section instead of arguing.</p>
+<p>GitHub&#39;s post asks anyone sending AI-assisted reports to check every finding against the project&#39;s threat model and security policy first. That only works if the project has written them down.</p>
+<h2>The fix had a bug</h2>
+<p>As part of the program, GitHub Security Lab ran an AI-assisted security audit on the code. It found three things. The one that stung: a hole in an auth fix I had shipped earlier this year. A security handler that did <code>throw null</code> still counted as a pass.</p>
+<p>Same corner of the code. Same class of bug. Third time this year.</p>
+<p>The reason is boring. I had plenty of tests for what should pass and not nearly enough for what must not. AI doesn&#39;t get bored listing every weird way a function can fail. I do.</p>
+<p>The reports arrived privately on a Monday. All three were fixed and published on Tuesday. GitHub&#39;s post quotes a Netty maintainer: &quot;Finding vulnerabilities is no longer our bottleneck. Fixing them is the hard part, and that depends on maintainers.&quot; Same here. The audit found the bugs. The fix, a test for every weird failure mode, the release and the advisories were still on me.</p>
+<h2>Nobody reads the security page</h2>
+<p>The most common way an API built on openapi-backend ends up insecure is how the library gets wired up. Security handlers registered, nothing registered to reject failed auth, and the operation handler runs anyway. It&#39;s documented. Nobody reads the security page until after the incident.</p>
+<p>So I wrote <a href="https://github.com/openapistack/openapi-backend-codeql">openapi-backend-codeql</a>: CodeQL packs that find those setups in your code scanning results. An alert in your pull request is a todo. Docs are a suggestion.</p>
+<p>My favourite part is the models pack. openapi-backend builds the request object inside <code>node_modules</code>, where CodeQL doesn&#39;t look, so its built-in SQL injection and XSS queries had no idea your handler input comes from the client. Now they do.</p>
+<pre><code class="hljs language-yaml"><span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">github/codeql-action/init@v4</span>
+  <span class="hljs-attr">with:</span>
+    <span class="hljs-attr">languages:</span> <span class="hljs-string">javascript-typescript</span>
+    <span class="hljs-attr">packs:</span> <span class="hljs-string">|
+      openapistack/openapi-backend-queries
+      openapistack/openapi-backend-models</span>
+</code></pre><h2>A security policy for one person</h2>
+<p><a href="https://github.com/openapistack/openapi-backend/blob/main/SECURITY.md">SECURITY.md</a> now opens with: &quot;openapi-backend has a single maintainer: me, in my spare time. There is no security team, no bug bounty and no SLA.&quot;</p>
+<p>The incident response plan is sized for the project it is. Six steps one person can actually execute, and exactly one hard promise: a confirmed malicious version gets deprecated within 24 hours.</p>
+<p>The threat model also names the biggest residual risk: one person holds both GitHub admin and npm publish rights. Writing that down is uncomfortable. It&#39;s also true, and you should know it before you depend on the library.</p>
+<h2>What&#39;s next</h2>
+<p>openapi-backend went first because it sits on the auth path. Next I&#39;m applying what I learned to every library in openapi-stack, starting with openapi-client-axios and openapicmd. The program comes with check-ins at 6 and 12 months, so there&#39;s a deadline on that. Good.</p>
+<p>Lenient by default was a design choice I made in 2018. For auth, it was the wrong one. Until that changes: upgrade to the latest 5.x, set <code>strict: true</code> and read the <a href="https://openapistack.co/docs/openapi-backend/security/">Security Best Practices</a> guide.</p>
+<h2>Thanks</h2>
+<p>To Gregg Cochran and the GitHub Secure Open Source Fund team for running a program this well. To the GitHub Security Lab experts for the findings that stung the most and for the CodeQL help. To the Session 5 maintainers, who answered a Dependabot question on kickoff day like it was the most normal thing in the world.</p>
+<p>Security is quality. It&#39;s not a specialist&#39;s job and it&#39;s not a phase.</p>
+<p>Maintaining something people depend on? <a href="https://github.com/open-source/github-secure-open-source-fund">Apply for the next session</a>.</p>
+<p>Happy OSS Hacking!</p>
+<p>Viljami</p>
+]]></content:encoded>
+        </item>
         <item>
             <title><![CDATA[AI Didn't Wreck Our Code Quality. Here's the Data.]]></title>
             <link>https://viljami.io/feed/ai-didnt-wreck-our-code-quality/</link>
